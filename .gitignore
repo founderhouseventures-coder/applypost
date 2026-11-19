@@ -4,6 +4,7 @@ credentials/credentials.json
 token.json
 token-readonly.json
 data/state.json
+.vercel/
 
 # Python
 __pycache__/

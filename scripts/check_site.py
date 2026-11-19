@@ -1,3 +1,4 @@
+import json
 from html.parser import HTMLParser
 from pathlib import Path
 from xml.etree import ElementTree
@@ -50,6 +51,10 @@ def main():
     assert all((ROOT / asset).is_file() for asset in parser.assets), "missing local asset"
     assert not any(asset.startswith(("http://", "https://")) for asset in parser.assets), "remote runtime asset"
     ElementTree.parse(ROOT / "sitemap.xml")
+    vercel = json.loads((ROOT.parent / "vercel.json").read_text(encoding="utf-8"))
+    assert vercel["outputDirectory"] == "site", "Vercel must publish only the static product site"
+    headers = {header["key"].lower(): header["value"] for rule in vercel["headers"] for header in rule["headers"]}
+    assert {"content-security-policy", "strict-transport-security", "x-content-type-options", "x-frame-options", "referrer-policy"} <= headers.keys(), "Vercel response security headers are incomplete"
     print("JobMail site checks passed.")
 
 
