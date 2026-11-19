@@ -8,13 +8,14 @@ Updated: 2026-11-19
 - Repository: `applypost`
 - Intended visibility: public
 - Default branch: `main`
-- Pages URL after the repository exists and Pages deploy succeeds: `https://founderhouseventures-coder.github.io/applypost/`
+- Vercel production URL (founder `EatItOut` team): `https://jobmail-ruby.vercel.app/`
+- GitHub Pages fallback: `https://founderhouseventures-coder.github.io/applypost/`
 - Public contact address in the site: `eatitall.founder@gmail.com`; verify that mailbox before publishing or accepting inquiries.
 
 ## Completed handoff state
 
 - Public repository `founderhouseventures-coder/applypost` exists and `origin` points to it. Commit `669cc6b` is on founder `main`.
-- GitHub Actions CI passed for that commit. GitHub Pages was enabled and the homepage, `robots.txt`, and `sitemap.xml` returned HTTP 200. Pages is a temporary fallback; the requested final host is founder-owned Vercel.
+- GitHub Actions CI passed for commit `7c3436a`. Founder Vercel project `jobmail` deployed to production from `founderhouseventures-coder/applypost`; the production page, `robots.txt`, and `sitemap.xml` returned HTTP 200, and the response includes CSP and HSTS headers.
 - The local Git author is set to `Founder House Ventures <eatitall.founder@gmail.com>` for new commits. Verify the address on GitHub before relying on its attribution or accepting inquiries.
 - `vercel.json` is ready to publish only the `site/` directory and set response security headers. `.vercel/` is ignored.
 - This source defaults to Gmail read-only scope and keeps messages unread. `--mark-read` explicitly opts into Gmail label changes.
@@ -23,12 +24,9 @@ Updated: 2026-11-19
 
 ## Remaining owner access and product checks
 
-1. Connect/sign in to Vercel using the founder account. The current Vercel connector is authenticated as the former personal account, so no founder Vercel project has been created.
-2. In the founder Vercel workspace, import `founderhouseventures-coder/applypost` as project `jobmail`, deploy `main`, and verify the exact production URL plus security headers.
-3. After Vercel provides its production hostname, update the canonical URL, Open Graph URL, schema URL, `robots.txt`, and `sitemap.xml` from the temporary GitHub Pages URL, then redeploy.
-4. Verify `eatitall.founder@gmail.com` before accepting setup inquiries.
-5. For real Gmail/Sheets testing, use a dedicated test inbox and a Google Cloud OAuth project controlled by the founder. Test the read-only preview and Sheet write before any optional `--mark-read` test. Public multi-user distribution needs the applicable Google OAuth consent verification.
-6. Keep the old repository until the Vercel deployment and owner-controlled OAuth checks pass.
+1. Verify `eatitall.founder@gmail.com` before accepting setup inquiries.
+2. For real Gmail/Sheets testing, use a dedicated test inbox and a Google Cloud OAuth project controlled by the founder. Test the read-only preview and Sheet write before any optional `--mark-read` test. Public multi-user distribution needs the applicable Google OAuth consent verification.
+3. Keep the old repository until owner-controlled OAuth checks pass.
 
 ## Product boundary
 

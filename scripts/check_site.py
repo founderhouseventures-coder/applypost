@@ -43,6 +43,10 @@ def main():
     assert 'http-equiv="Content-Security-Policy"' in html, "the static page needs a restrictive content policy"
     assert 'property="og:title"' in html and 'name="twitter:card"' in html, "social preview metadata is missing"
     assert 'type="application/ld+json"' in html, "software structured data is missing"
+    production_url = "https://jobmail-ruby.vercel.app/"
+    assert f'<link rel="canonical" href="{production_url}">' in html, "canonical URL must use the production host"
+    assert f'<meta property="og:url" content="{production_url}">' in html, "Open Graph URL must use the production host"
+    assert f'"url":"{production_url}"' in html, "structured data URL must use the production host"
     assert all(fragment in parser.ids for fragment in parser.fragments), "broken in-page link"
     assert all(controlled_id in parser.ids for controlled_id in parser.controlled_ids), "broken aria-controls reference"
     assert {"sample-rows-toggle", "sample-rows", "sample-copy", "sample-copy-status"} <= parser.ids, "sample sheet preview controls are missing"
@@ -50,7 +54,9 @@ def main():
     assert "Don’t email passwords, OAuth tokens" in html, "contact safety guidance is missing"
     assert all((ROOT / asset).is_file() for asset in parser.assets), "missing local asset"
     assert not any(asset.startswith(("http://", "https://")) for asset in parser.assets), "remote runtime asset"
-    ElementTree.parse(ROOT / "sitemap.xml")
+    sitemap = ElementTree.parse(ROOT / "sitemap.xml")
+    assert sitemap.findtext(".//{http://www.sitemaps.org/schemas/sitemap/0.9}loc") == production_url, "sitemap must use the production host"
+    assert f"Sitemap: {production_url}sitemap.xml" in (ROOT / "robots.txt").read_text(encoding="utf-8"), "robots.txt must use the production sitemap"
     vercel = json.loads((ROOT.parent / "vercel.json").read_text(encoding="utf-8"))
     assert vercel["outputDirectory"] == "site", "Vercel must publish only the static product site"
     headers = {header["key"].lower(): header["value"] for rule in vercel["headers"] for header in rule["headers"]}
