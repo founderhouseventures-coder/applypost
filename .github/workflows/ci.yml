@@ -10,6 +10,8 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    env:
+      DJANGO_DEBUG: "true"
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v7
@@ -19,10 +21,18 @@ jobs:
           cache-dependency-path: |
             requirements.txt
             requirements-dev.txt
-      - run: python -m pip install -r requirements.txt -r requirements-dev.txt
+            saas/requirements.txt
+      - run: python -m pip install -r requirements.txt -r requirements-dev.txt -r saas/requirements.txt
       - run: python -m unittest discover -s src -p 'test_*.py' -v
       - run: ruff check src
       - run: python -m compileall -q src scripts
+      - run: python manage.py check
+        working-directory: saas
+      - run: python manage.py makemigrations --check --dry-run
+        working-directory: saas
+      - run: python manage.py test tracker -v 2
+        working-directory: saas
+      - run: python -m ruff check saas
       - run: python scripts/check_site.py
       - run: python src/main.py --replay-demo --explain-matches
       - uses: actions/setup-node@v7

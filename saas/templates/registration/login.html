@@ -1,0 +1,3 @@
+{% extends "tracker/base.html" %}
+{% block title %}Sign in · JobMail{% endblock %}
+{% block content %}<section class="form-card"><p class="eyebrow">WELCOME BACK</p><h1>Sign in to JobMail</h1><form method="post">{% csrf_token %}{{ form.as_p }}<button class="button primary">Sign in</button></form><p><a href="{% url 'password_reset' %}">Forgot password?</a> · <a href="{% url 'signup' %}">Create account</a></p></section>{% endblock %}

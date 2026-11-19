@@ -1,6 +1,8 @@
 # JobMail owner inputs required
 
-These steps need the founder's Google account and a dedicated test inbox. No OAuth client credentials, token, `.env`, or spreadsheet ID are present in this worktree. Do not upload credentials or inbox data to GitHub or Vercel.
+These steps need founder-owned service accounts and secrets. Do not upload credentials, payment keys, database exports, or inbox data to GitHub.
+
+Google OAuth steps below are only for the optional local Gmail-to-Sheets connector; they are not required to deploy the new SaaS beta.
 
 The public contact address is `founderhouse.ventures@gmail.com`; it received and completed Vercel identity verification.
 
@@ -34,6 +36,24 @@ The public contact address is `founderhouse.ventures@gmail.com`; it received and
 - The shared service is now copied to the private founder repo [`founderhouseventures-coder/leadhub`](https://github.com/founderhouseventures-coder/leadhub), commit `2b38514`; its four local tests and founder GitHub CI pass. The previous personal repo remains unchanged, and the local `previous-personal` remote is retained only as a reference.
 - To activate this funnel, deploy `founderhouseventures-coder/leadhub` as a Render Blueprint. Its current blueprint requires the paid Starter plan and persistent disk. It also needs a public HTTPS `BASE_URL`, Resend account/API key, verified sender for `MAIL_FROM`, and generated `ADMIN_TOKEN`/per-project event keys. Keep all secret values in the service dashboard, not chat or GitHub.
 - Once the founder-owned service is live and its confirmation/unsubscribe flow is verified, provide its HTTPS origin. Then the JobMail widget can be configured and redeployed.
+
+## 4. SaaS production setup (new local foundation)
+
+The Django app in `saas/` has not been deployed. It keeps Gmail data out of its database and uses a Render web service plus PostgreSQL.
+
+1. In the founder's Render workspace, deploy the repository Blueprint from `render.yaml`. Confirm the paid service/database plan and expected monthly cost before accepting provider billing.
+2. Set `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`, and `SITE_URL` to the exact Render host (or owned domain). Do not use wildcards.
+3. Configure a verified founder-owned sender and SMTP credentials in Render (`DEFAULT_FROM_EMAIL`, `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS`). Verify signup activation and password reset arrive.
+4. In Razorpay Test Mode, create a monthly plan, then set `RAZORPAY_KEY_ID` (`rzp_test_...`), `RAZORPAY_KEY_SECRET`, `RAZORPAY_PLAN_ID`, and `RAZORPAY_WEBHOOK_SECRET` in Render. Register webhook URL `https://<jobmail-host>/billing/razorpay/webhook/` for subscription lifecycle events. Set `PRO_PRICE_DISPLAY` to the exact plan amount.
+5. Complete test checkout, activation, payment failure, cancellation, duplicate webhook, and account-deletion checks. Do not enter live keys before all tests pass and legal terms are reviewed.
+6. Configure database backups and complete an actual restore drill. Then connect alerting/error tracking. Neither is yet configured.
+7. Live billing requires deliberate dashboard changes: `RAZORPAY_MODE=live` and `LIVE_BILLING_ENABLED=true`, plus live keys. Do this only after launch approval, legal/tax setup, and test-mode evidence.
+
+## 5. Product and compliance owner work
+
+- Validate recurring willingness to pay and decide whether the 25-item free cap / proposed ₹299 monthly tier solves a real repeated problem.
+- Provide accurate business identity, support email/domain, jurisdiction, refund/cancellation rules, privacy retention/deletion policy, and terms for professional review.
+- Gmail server sync is deliberately excluded. `gmail.readonly` is a restricted scope and Google may require verification and a security assessment when restricted data is stored/transmitted on servers. Use local client mode until approvals are complete.
 
 ## Current evidence
 

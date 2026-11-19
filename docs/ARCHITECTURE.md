@@ -42,3 +42,15 @@ flowchart LR
 4. Keep `.env`, OAuth credentials, token files, generated CSV exports, and checkpoints out of Git. Revoke OAuth access in the Google account when the user stops using the tool.
 
 No hosted API, account system, billing service, or production monitoring is part of this architecture.
+
+## ADR-002: SaaS beta without hosted Gmail ingestion
+
+**Decision:** Add a separate Django application under `saas/` for accounts, user-entered job applications, export/delete, and optional Razorpay subscriptions. Keep the existing Gmail → Sheets client running locally. Do not store Gmail OAuth refresh tokens, message bodies, or inbox data in the SaaS.
+
+**Reason:** JobMail's existing Gmail workflow requests `gmail.readonly`, which Google classifies as a restricted scope. Server-side storage or transmission of restricted-scope data requires OAuth verification and a security assessment. A small SaaS can validate the job-search tracker workflow without taking custody of users' inboxes.
+
+**Data boundary:** The SaaS database holds a Django user, job application fields entered by that user, subscription state, and provider event IDs. It does not hold passwords in plain text, Gmail data, card details, or payment secrets. Razorpay owns checkout and recurring payment authorization; webhook events are signature-checked over raw request bytes and deduplicated by event ID.
+
+**Deployment:** Render web service + PostgreSQL are described in `render.yaml`. Local development uses SQLite. Production secrets, a verified sender, database backups, and Razorpay plan/test keys are owner-controlled setup items. Live billing is opt-in through `RAZORPAY_MODE=live` and `LIVE_BILLING_ENABLED=true`; test mode is the default.
+
+**Limit:** This is a beta foundation, not evidence of paying demand or production launch. It currently has a basic user-entered pipeline and a proposed ₹299 monthly price. Before paid launch, validate the recurring value with job seekers, implement the paid benefits that survive that validation, have legal terms/privacy reviewed, test the full Razorpay lifecycle, and confirm operational restore procedures.

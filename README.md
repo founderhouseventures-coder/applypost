@@ -1,10 +1,16 @@
 # JobMail
 
-**A local-first Gmail → Google Sheets tracker for job-related email.**
+**JobMail helps job seekers keep applications and follow-ups in one clear pipeline.**
 
 [Open the product site](https://founderhouseventures-coder.github.io/applypost/) · [Run the script](#run-the-script) · [Review privacy and OAuth](#oauth-flow-explanation)
 
 ---
+
+## Product status
+
+The repository now contains two pieces: the existing local-first Gmail → Google Sheets utility (`src/`) and a new Django SaaS beta (`saas/`). The SaaS currently tracks applications entered by the user; it does not request Gmail access or sync inboxes. The production SaaS, outgoing email, and payment account are not configured yet. Its proposed ₹299/month price is an unvalidated beta hypothesis, not an active charge or proven revenue.
+
+To run the web beta locally, see [`saas/README.md`](saas/README.md). The original CLI still works independently.
 
 ## Project overview
 

@@ -1,0 +1,5 @@
+exclude = ["tracker/migrations/*.py"]
+
+[lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF", "PIE"]
+ignore = ["RUF012"]

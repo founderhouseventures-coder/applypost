@@ -5,6 +5,9 @@ token.json
 token-readonly.json
 data/state.json
 .vercel/
+saas/.env
+saas/db.sqlite3
+saas/staticfiles/
 
 # Python
 __pycache__/
