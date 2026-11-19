@@ -31,8 +31,8 @@ The public contact address is `founderhouse.ventures@gmail.com`; it received and
 ## 3. Connect the shared LeadHub signup
 
 - JobMail's signup and recommendations stay hidden because `site/index.html` has an empty `leadhub-url` setting.
-- The local `EatItAll/03_LeadHub` service passed its 4 local tests, but it has no production URL. Its local git remote still points to the previous `YashRaJShaRMaCODE/leadhub` account and its worktree contains uncommitted changes; that repo was left untouched.
-- Before this funnel can go live under the founder account, migrate/recreate a clean LeadHub repo under `founderhouseventures-coder`, then deploy it. The current Render blueprint requires the Starter plan and persistent disk. Deployment also needs a public HTTPS `BASE_URL`, Resend account/API key, verified sender for `MAIL_FROM`, and generated `ADMIN_TOKEN`/per-project event keys. Keep all secret values in the service dashboard, not chat or GitHub.
+- The shared service is now copied to the private founder repo [`founderhouseventures-coder/leadhub`](https://github.com/founderhouseventures-coder/leadhub), commit `2b38514`; its four local tests and founder GitHub CI pass. The previous personal repo remains unchanged, and the local `previous-personal` remote is retained only as a reference.
+- To activate this funnel, deploy `founderhouseventures-coder/leadhub` as a Render Blueprint. Its current blueprint requires the paid Starter plan and persistent disk. It also needs a public HTTPS `BASE_URL`, Resend account/API key, verified sender for `MAIL_FROM`, and generated `ADMIN_TOKEN`/per-project event keys. Keep all secret values in the service dashboard, not chat or GitHub.
 - Once the founder-owned service is live and its confirmation/unsubscribe flow is verified, provide its HTTPS origin. Then the JobMail widget can be configured and redeployed.
 
 ## Current evidence
