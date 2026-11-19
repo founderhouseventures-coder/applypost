@@ -1,10 +1,13 @@
 import unittest
 from unittest.mock import Mock
 
-from sheets_service import append_row, get_logged_message_ids
+from sheets_service import SCOPES, append_row, get_logged_message_ids
 
 
 class SheetsServiceTests(unittest.TestCase):
+    def test_sheets_requests_only_the_spreadsheet_scope(self):
+        self.assertEqual(SCOPES, ["https://www.googleapis.com/auth/spreadsheets"])
+
     def test_appends_raw_row_including_message_id(self):
         service = Mock()
         row = ["from", "subject", "date", "", "message-1"]

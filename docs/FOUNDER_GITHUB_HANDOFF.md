@@ -10,12 +10,13 @@ Updated: 2026-11-19
 - Default branch: `main`
 - Vercel production URL (founder `EatItOut` team): `https://jobmail-ruby.vercel.app/`
 - GitHub Pages fallback: `https://founderhouseventures-coder.github.io/applypost/`
-- Public contact address in the site: `eatitall.founder@gmail.com`; verify that mailbox before publishing or accepting inquiries.
+- Public contact address in the site: `eatitall.founder@gmail.com`; mailbox ownership and receive path are still unverified.
 
 ## Completed handoff state
 
-- Public repository `founderhouseventures-coder/applypost` exists and `origin` points to it. Commit `669cc6b` is on founder `main`.
-- GitHub Actions CI passed for commit `7c3436a`. Founder Vercel project `jobmail` deployed to production from `founderhouseventures-coder/applypost`; the production page, `robots.txt`, and `sitemap.xml` returned HTTP 200, and the response includes CSP and HSTS headers.
+- Public repository `founderhouseventures-coder/applypost` exists and `origin` points to it. Commit `4fb26c0` is on founder `main`.
+- GitHub Actions CI and the site deploy passed for `4fb26c0`. Founder Vercel project `jobmail` serves production at `https://jobmail-ruby.vercel.app/`; the homepage, `robots.txt`, and `sitemap.xml` return HTTP 200, and live HTML uses the production host for canonical, Open Graph, and structured data URLs.
+- Sheets access now requests only the Sheets scope; Gmail modify permission is reserved for the deliberate `--mark-read` option.
 - The local Git author is set to `Founder House Ventures <eatitall.founder@gmail.com>` for new commits. Verify the address on GitHub before relying on its attribution or accepting inquiries.
 - `vercel.json` is ready to publish only the `site/` directory and set response security headers. `.vercel/` is ignored.
 - This source defaults to Gmail read-only scope and keeps messages unread. `--mark-read` explicitly opts into Gmail label changes.
@@ -24,9 +25,8 @@ Updated: 2026-11-19
 
 ## Remaining owner access and product checks
 
-1. Verify `eatitall.founder@gmail.com` before accepting setup inquiries.
-2. For real Gmail/Sheets testing, use a dedicated test inbox and a Google Cloud OAuth project controlled by the founder. Test the read-only preview and Sheet write before any optional `--mark-read` test. Public multi-user distribution needs the applicable Google OAuth consent verification.
-3. Keep the old repository until owner-controlled OAuth checks pass.
+1. Complete the account and Google API setup in [`OWNER_INPUTS_REQUIRED.md`](OWNER_INPUTS_REQUIRED.md).
+2. Keep the old repository until owner-controlled OAuth checks pass.
 
 ## Product boundary
 
