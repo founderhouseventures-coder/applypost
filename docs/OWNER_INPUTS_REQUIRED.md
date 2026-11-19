@@ -41,13 +41,14 @@ The public contact address is `founderhouse.ventures@gmail.com`; it received and
 
 The Django app in `saas/` has not been deployed. It keeps Gmail data out of its database and uses a Render web service plus PostgreSQL.
 
-1. In the founder's Render workspace, deploy the repository Blueprint from `render.yaml`. Confirm the paid service/database plan and expected monthly cost before accepting provider billing.
-2. Set `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`, and `SITE_URL` to the exact Render host (or owned domain). Do not use wildcards.
-3. Configure a verified founder-owned sender and SMTP credentials in Render (`DEFAULT_FROM_EMAIL`, `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS`). Verify signup activation and password reset arrive.
-4. In Razorpay Test Mode, create a monthly plan, then set `RAZORPAY_KEY_ID` (`rzp_test_...`), `RAZORPAY_KEY_SECRET`, `RAZORPAY_PLAN_ID`, and `RAZORPAY_WEBHOOK_SECRET` in Render. Register webhook URL `https://<jobmail-host>/billing/razorpay/webhook/` for subscription lifecycle events. Set `PRO_PRICE_DISPLAY` to the exact plan amount.
-5. Complete test checkout, activation, payment failure, cancellation, duplicate webhook, and account-deletion checks. Do not enter live keys before all tests pass and legal terms are reviewed.
-6. Configure database backups and complete an actual restore drill. Then connect alerting/error tracking. Neither is yet configured.
-7. Live billing requires deliberate dashboard changes: `RAZORPAY_MODE=live` and `LIVE_BILLING_ENABLED=true`, plus live keys. Do this only after launch approval, legal/tax setup, and test-mode evidence.
+1. **Add a payment method to the founder Render workspace.** Current Blueprint planning returned `need_payment_info` for both the web service and Postgres; no resources were created. The proposed minimum is about **$13/month** before bandwidth/storage growth (`0.5c-512mb` web $7 + `0.1c-256mb` Postgres $6). Confirm the exact checkout amount in Render before accepting it. The $0 Hobby workspace does not make paid compute free.
+2. After payment is available, deploy the repository Blueprint from `render.yaml`; confirm the exact plan/cost shown in Render before approving the sync.
+3. Set `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`, and `SITE_URL` to the exact Render host (or owned domain). Do not use wildcards.
+4. Configure a verified founder-owned sender and SMTP credentials in Render (`DEFAULT_FROM_EMAIL`, `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS`). Verify signup activation and password reset arrive.
+5. In Razorpay Test Mode, create a monthly plan, then set `RAZORPAY_KEY_ID` (`rzp_test_...`), `RAZORPAY_KEY_SECRET`, `RAZORPAY_PLAN_ID`, and `RAZORPAY_WEBHOOK_SECRET` in Render. Register webhook URL `https://<jobmail-host>/billing/razorpay/webhook/` for subscription lifecycle events. Set `PRO_PRICE_DISPLAY` to the exact plan amount.
+6. Complete test checkout, activation, payment failure, cancellation, duplicate webhook, and account-deletion checks. Do not enter live keys before all tests pass and legal terms are reviewed.
+7. Configure database backups and complete an actual restore drill. Then connect alerting/error tracking. Neither is yet configured.
+8. Live billing requires deliberate dashboard changes: `RAZORPAY_MODE=live` and `LIVE_BILLING_ENABLED=true`, plus live keys. Do this only after launch approval, legal/tax setup, and test-mode evidence.
 
 ## 5. Product and compliance owner work
 

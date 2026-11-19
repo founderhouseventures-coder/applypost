@@ -1,19 +1,19 @@
 # JobMail SaaS: founder launch checklist
 
-Local code and checks are ready. The SaaS is not live; the existing Vercel URL is the separate static site. Complete these founder-only steps in order.
+The SaaS code is already pushed to the founder repo and CI passed. The existing Vercel URL is a separate static site; the Django SaaS is not live. Render planning is blocked because the founder workspace needs payment information. Complete these founder-only steps in order.
 
-## 1. Publish the prepared code to the founder GitHub repo (about 5 minutes)
+## 1. Add billing to founder Render (about 5 minutes; no deployment happens yet)
 
-1. Open [founderhouseventures-coder/applypost](https://github.com/founderhouseventures-coder/applypost).
-2. In the local repo, review the changes, then commit and push the `main` branch to `origin` (the founder repo). Do not push to `previous-personal` or any company account.
-3. Open the repository's **Actions** tab and confirm the new workflow run is green.
+1. Open [Render Billing](https://dashboard.render.com/billing) while signed into the founder workspace.
+2. Add a payment method only if you accept the estimated minimum of **$13/month**: web `0.5c-512mb` ($7/month) + Postgres `0.1c-256mb` ($6/month). Hobby workspace is $0; bandwidth beyond included usage and storage growth can add cost. Confirm the live amount in Render before saving.
+3. Do not choose the Free web service or Free Postgres for customer data: they do not provide an always-on app plus a durable production database.
 
 ## 2. Create the JobMail SaaS on Render (about 15–25 minutes, plus provider setup)
 
 1. Open [Render Dashboard](https://dashboard.render.com/), sign in to the founder workspace, choose **New → Blueprint**, and connect `founderhouseventures-coder/applypost`.
-2. Select the repository's `render.yaml`. Before confirming, review the web service and PostgreSQL plan/cost shown by Render; approve only if the monthly spend is acceptable.
+2. Select the repository's `render.yaml`. It now selects the smallest paid always-on web plan and paid Postgres. Review Render's actual plan and total before approving.
 3. In the `jobmail-saas` service, set `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`, and `SITE_URL` to its exact HTTPS hostname. Keep `DJANGO_DEBUG=false` and `LIVE_BILLING_ENABLED=false`.
-4. Add a verified sender and SMTP credentials in the service's **Environment** page: `DEFAULT_FROM_EMAIL`, `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS`.
+4. Add a verified sender and SMTP credentials in the service's **Environment** page: `DEFAULT_FROM_EMAIL`, `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS`. Never put credential values in GitHub or chat.
 5. Wait for **Live**. Open `https://<jobmail-host>/health/` and confirm it returns `{"status":"ok"}`.
 
 ## 3. Verify account email (about 10 minutes)
