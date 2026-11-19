@@ -1,0 +1,10 @@
+.env
+.env.*
+!.env.example
+!.env.oci.example
+backups/
+db.sqlite3
+staticfiles/
+__pycache__/
+*.py[cod]
+.ruff_cache/

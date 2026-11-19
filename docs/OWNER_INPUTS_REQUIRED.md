@@ -37,18 +37,16 @@ The public contact address is `founderhouse.ventures@gmail.com`; it received and
 - To activate this funnel, deploy `founderhouseventures-coder/leadhub` as a Render Blueprint. Its current blueprint requires the paid Starter plan and persistent disk. It also needs a public HTTPS `BASE_URL`, Resend account/API key, verified sender for `MAIL_FROM`, and generated `ADMIN_TOKEN`/per-project event keys. Keep all secret values in the service dashboard, not chat or GitHub.
 - Once the founder-owned service is live and its confirmation/unsubscribe flow is verified, provide its HTTPS origin. Then the JobMail widget can be configured and redeployed.
 
-## 4. SaaS production setup (new local foundation)
+## 4. SaaS production setup (free OCI path)
 
-The Django app in `saas/` has not been deployed. It keeps Gmail data out of its database and uses a Render web service plus PostgreSQL.
+The Django app in `saas/` is not deployed. The free deployment bundle is in `saas/deploy/oci/README.md`: Django, PostgreSQL, and Caddy run on one founder OCI Always Free VM. No OCI account or server credentials are connected here, so provisioning is still founder-only. Always Free has no SLA; Oracle may reclaim underused compute.
 
-1. **Add a payment method to the founder Render workspace.** Current Blueprint planning returned `need_payment_info` for both the web service and Postgres; no resources were created. The proposed minimum is about **$13/month** before bandwidth/storage growth (`0.5c-512mb` web $7 + `0.1c-256mb` Postgres $6). Confirm the exact checkout amount in Render before accepting it. The $0 Hobby workspace does not make paid compute free.
-2. After payment is available, deploy the repository Blueprint from `render.yaml`; confirm the exact plan/cost shown in Render before approving the sync.
-3. Set `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`, and `SITE_URL` to the exact Render host (or owned domain). Do not use wildcards.
-4. Configure a verified founder-owned sender and SMTP credentials in Render (`DEFAULT_FROM_EMAIL`, `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS`). Verify signup activation and password reset arrive.
-5. In Razorpay Test Mode, create a monthly plan, then set `RAZORPAY_KEY_ID` (`rzp_test_...`), `RAZORPAY_KEY_SECRET`, `RAZORPAY_PLAN_ID`, and `RAZORPAY_WEBHOOK_SECRET` in Render. Register webhook URL `https://<jobmail-host>/billing/razorpay/webhook/` for subscription lifecycle events. Set `PRO_PRICE_DISPLAY` to the exact plan amount.
-6. Complete test checkout, activation, payment failure, cancellation, duplicate webhook, and account-deletion checks. Do not enter live keys before all tests pass and legal terms are reviewed.
-7. Configure database backups and complete an actual restore drill. Then connect alerting/error tracking. Neither is yet configured.
-8. Live billing requires deliberate dashboard changes: `RAZORPAY_MODE=live` and `LIVE_BILLING_ENABLED=true`, plus live keys. Do this only after launch approval, legal/tax setup, and test-mode evidence.
+1. Create/sign in to the founder's Oracle Cloud Free Tier account, complete card verification without upgrading, and provision only an Always Free Ubuntu A1 VM within the console's quotas.
+2. Create a DuckDNS hostname, point it to the VM, and restrict SSH ingress to the founder's current IP. Keep its token private.
+3. Follow the repo's OCI guide to configure `saas/.env`, deploy the containers, and verify HTTPS plus `/health/`.
+4. Add a founder Gmail App Password only to the server `.env` for low-volume account emails; test signup activation and password reset.
+5. Use Razorpay Test Mode only. The owner must complete merchant onboarding, supply test plan and webhook credentials on the server, and verify checkout/cancellation/webhook tests.
+6. Before live billing, complete legal/tax review, pricing validation, off-server encrypted backups, a restore drill, and account-specific Razorpay live approval. Keep live keys and `LIVE_BILLING_ENABLED=true` off until then.
 
 ## 5. Product and compliance owner work
 

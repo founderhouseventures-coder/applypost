@@ -1,0 +1,66 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-jobmail}
+      POSTGRES_USER: ${POSTGRES_USER:-jobmail}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Generate POSTGRES_PASSWORD in saas/.env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    mem_limit: 2g
+
+  web:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-jobmail}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-jobmail}
+      DATABASE_SSLMODE: disable
+      DJANGO_DEBUG: "false"
+      SECURE_SSL_REDIRECT: "true"
+    expose:
+      - "8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import os, urllib.request; request=urllib.request.Request('http://127.0.0.1:8000/health/', headers={'Host': os.environ['SITE_DOMAIN'], 'X-Forwarded-Proto': 'https'}); urllib.request.urlopen(request, timeout=4)
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+    mem_limit: 2g
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN:?Set SITE_DOMAIN in saas/.env}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/oci/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+    mem_limit: 256m
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:

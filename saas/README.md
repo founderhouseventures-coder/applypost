@@ -33,19 +33,13 @@ Use test keys with `RAZORPAY_MODE=test` first. The server creates a subscription
 
 ## Production environment
 
-The Render Blueprint is at repository root `render.yaml`. It expects a Render web service and PostgreSQL database. Add the following values only in the founder-owned service dashboard:
+For the free deployment path, follow [`deploy/oci/README.md`](deploy/oci/README.md). It runs Django and PostgreSQL together on one OCI Always Free VM, with Caddy providing HTTPS. Free-tier use is best-effort and has no uptime SLA. The old paid Render blueprint is retained as `../render.paid.yaml`; do not use it for the zero-cost setup.
 
-- `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`, `SITE_URL`
-- `DEFAULT_FROM_EMAIL` and verified SMTP host/user/password
-- Razorpay test `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`, and `RAZORPAY_PLAN_ID`
-- `PRO_PRICE_DISPLAY` that exactly matches the provider plan
-- Optional `SENTRY_DSN` to enable error reporting without sending user PII
-
-Do not configure live billing until test lifecycle proof exists. Follow Django's production deployment checklist and run `python manage.py check --deploy` in the deployed environment.
+The OCI environment uses a founder-owned sender via SMTP for transactional account messages. Keep Razorpay in test mode until the founder account, plan, webhook, business details, and test lifecycle have been verified. Never enable live billing without owner approval and legal/tax readiness.
 
 ## Backup and restore
 
-PostgreSQL backups are not automated by this app. Configure provider backups before inviting real customers. Use the provider's native backup and restore process; do not keep database dumps in this Git repository or public object storage. A documented owner-run drill is still required before calling operations production-ready.
+The OCI guide includes a daily local database dump with rotation and a restore script. This is not an off-site backup; copy encrypted backups to a separate private location and perform a restore drill before inviting real customers. Do not keep database dumps in this Git repository or public object storage.
 
 ## Verification
 

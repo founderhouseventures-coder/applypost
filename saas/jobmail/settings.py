@@ -85,7 +85,7 @@ if DATABASE_URL.startswith(("postgres://", "postgresql://")):
             "PASSWORD": urllib.parse.unquote(parsed.password or ""),
             "HOST": parsed.hostname,
             "PORT": parsed.port or 5432,
-            "OPTIONS": {"sslmode": "require"},
+            "OPTIONS": {"sslmode": os.environ.get("DATABASE_SSLMODE", "require")},
             "CONN_MAX_AGE": 60,
         }
     }

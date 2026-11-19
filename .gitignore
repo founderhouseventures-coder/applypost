@@ -8,6 +8,7 @@ data/state.json
 saas/.env
 saas/db.sqlite3
 saas/staticfiles/
+saas/backups/
 
 # Python
 __pycache__/
