@@ -143,15 +143,22 @@ def is_job_related(email_data, extra_keywords=()):
 # ✅ Block common newsletter / spam senders
 def is_blocked_sender(sender):
     blocked_keywords = [
-        "noreply",
         "newsletter",
+        "marketing",
+        "promotional",
+        "promotions",
         "beehiiv",
-        "academy",
-        "alerts"
     ]
 
     sender = sender.lower()
     return any(word in sender for word in blocked_keywords)
+
+
+def spreadsheet_safe_csv_value(value):
+    text = str(value)
+    if text.lstrip().startswith(("=", "+", "-", "@")) or text.startswith(("\t", "\r", "\n")):
+        return f"'{text}"
+    return value
 
 
 def preview_messages(
@@ -189,7 +196,7 @@ def preview_messages(
             if writer:
                 values = [email_data["from"], email_data["subject"], email_data["date"],
                           email_data["content"][:1000] if STORE_EMAIL_BODY else "", message_id]
-                writer.writerow([f"'{value}" if str(value).startswith(("=", "+", "-", "@", "\t", "\r")) else value for value in values])
+                writer.writerow([spreadsheet_safe_csv_value(value) for value in values])
     return matched, filtered, already_processed, pending, blocked_senders, no_job_signal
 
 
@@ -268,12 +275,12 @@ def process_messages(
 
 def main(
     dry_run=False, max_results=10, export_csv=None, since=None,
-    extra_keywords=(), status=False, keep_unread=False, explain_matches=False,
+    extra_keywords=(), status=False, keep_unread=True, explain_matches=False,
     receipt_jsonl=None, replay_demo=False,
 ):
     if replay_demo:
-        if status or keep_unread or receipt_jsonl or since:
-            logger.error("--replay-demo cannot be combined with --status, --keep-unread, --receipt-jsonl, or --since.")
+        if status or not keep_unread or receipt_jsonl or since:
+            logger.error("--replay-demo cannot be combined with --status, --mark-read, --receipt-jsonl, or --since.")
             return
         if not 1 <= max_results <= MAX_UNREAD_MESSAGES:
             logger.error("Message limit must be between 1 and %d.", MAX_UNREAD_MESSAGES)
@@ -306,7 +313,7 @@ def main(
         return
 
     try:
-        gmail_service = get_gmail_service(read_only=dry_run)
+        gmail_service = get_gmail_service(read_only=dry_run or keep_unread)
         sheets_service = None if dry_run else get_sheets_service()
     except FileNotFoundError:
         logger.error(
@@ -354,7 +361,10 @@ if __name__ == "__main__":
     parser.add_argument("--job-keyword", action="append", default=[], metavar="WORD", help="Also match this job-related word or phrase; may be repeated.")
     parser.add_argument("--explain-matches", action="store_true", help="In dry-run mode, log only matching keyword labels (not email details).")
     parser.add_argument("--status", action="store_true", help="Show local checkpoint counts without signing in to Gmail.")
-    parser.add_argument("--keep-unread", action="store_true", help="Log and checkpoint emails without removing their UNREAD label.")
+    gmail_action = parser.add_mutually_exclusive_group()
+    gmail_action.add_argument("--keep-unread", dest="keep_unread", action="store_true", help="Keep matched messages unread (default).")
+    gmail_action.add_argument("--mark-read", dest="keep_unread", action="store_false", help="Remove the UNREAD label after logging; grants Gmail modify access.")
+    parser.set_defaults(keep_unread=True)
     parser.add_argument("--receipt-jsonl", metavar="PATH", help="Append per-message outcome receipts (message IDs only; no email content).")
     parser.add_argument("--replay-demo", action="store_true", help="Run synthetic inbox messages through the parser without OAuth, Gmail, Sheets, or checkpoint access.")
     parser.add_argument(

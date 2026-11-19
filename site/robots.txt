@@ -1,3 +1,3 @@
 User-agent: *
 Allow: /
-Sitemap: https://yashrajsharmacode.github.io/applypost/sitemap.xml
+Sitemap: https://founderhouseventures-coder.github.io/applypost/sitemap.xml

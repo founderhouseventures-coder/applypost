@@ -2,7 +2,7 @@
 
 **A local-first Gmail → Google Sheets tracker for job-related email.**
 
-[Open the product site](https://yashrajsharmacode.github.io/applypost/) · [Run the script](#run-the-script) · [Review privacy and OAuth](#oauth-flow-explanation)
+[Open the product site](https://founderhouseventures-coder.github.io/applypost/) · [Run the script](#run-the-script) · [Review privacy and OAuth](#oauth-flow-explanation)
 
 ---
 
@@ -10,7 +10,7 @@
 
 JobMail is a Python automation tool that connects to the **Gmail API** and **Google Sheets API** through **OAuth 2.0**. It runs on your computer; the companion product site is static and uses fictional sample messages only.
 
-The [JobMail product site](https://yashrajsharmacode.github.io/applypost/) is a static overview. Its sample sorter can reveal and copy fictional spreadsheet-ready rows so you can review the output shape; it does not connect to Gmail or Sheets and contains no real email data.
+The [JobMail product site](https://founderhouseventures-coder.github.io/applypost/) is a static overview. Its sample sorter can reveal and copy fictional spreadsheet-ready rows so you can review the output shape; it does not connect to Gmail or Sheets and contains no real email data.
 
 ## Paid setup support
 
@@ -53,11 +53,9 @@ The system intelligently filters emails to log only job-related messages.
   - opportunity
   - assessment
 - Sender-based blocking:
-  - noreply
-  - newsletters
-  - promotional mailers
+  - newsletters and clear marketing/promotional mailers
 
-Job platforms such as LinkedIn, Internshala, Unstop and Fastweb are not blocked by brand name; messages from them still need a job-related keyword match.
+No-reply senders and job platforms such as LinkedIn, Internshala, Unstop and Fastweb are not blocked by address or brand alone; messages still need a job-related keyword match. Clear newsletter/marketing senders are filtered.
 
 This transforms the system into a focused **Job Opportunity Tracker** instead of a generic email logger.
 
@@ -74,7 +72,7 @@ Python Automation Script
     ├── Email Parsing
     ├── Smart Filtering
     ├── Duplicate Detection (state.json)
-    ├── Mark as Read
+    ├── Keep unread by default; mark read only when explicitly requested
     ▼
 Google Sheets
 ```
@@ -161,7 +159,7 @@ credentials/credentials.json
 
 Copy `.env.example` to `.env`, then set the spreadsheet ID and sheet name. Email bodies are not copied to Sheets by default; set `STORE_EMAIL_BODY=true` only if you want that sensitive data stored there.
 
-The normal run uses `gmail.modify` because it marks processed messages as read. `--dry-run` uses the narrower `gmail.readonly` scope and never writes Sheets rows or changes Gmail labels. Review the OAuth consent screen and revoke the token when you no longer use the app.
+The normal run uses Gmail read-only access and keeps processed messages unread by default. It writes matching rows to your selected Google Sheet and saves a local checkpoint. `--mark-read` opts into the broader `gmail.modify` scope and removes the UNREAD label after logging. `--dry-run` uses Gmail read-only access and never writes Sheets rows or changes Gmail labels. Review the OAuth consent screen and revoke the token when you no longer use the app.
 
 ---
 
@@ -179,18 +177,19 @@ python src/main.py --dry-run --explain-matches
 python src/main.py --receipt-jsonl data/run-receipts.jsonl
 python src/main.py --status
 python src/main.py --keep-unread
+python src/main.py --mark-read
 python src/main.py
 ```
 
-Each command scans up to 10 unread Inbox messages by default. Pass `--limit N` to choose a per-run batch from 1 to 500, for example `python src/main.py --dry-run --limit 100`. A larger limit processes more messages in one run; the normal run still uses `gmail.modify` and can mark processed messages as read.
+Each command scans up to 10 unread Inbox messages by default. Pass `--limit N` to choose a per-run batch from 1 to 500, for example `python src/main.py --dry-run --limit 100`. A larger limit processes more messages in one run. Normal runs keep Gmail messages unread; only `--mark-read` asks for permission to change their labels.
 
 `--replay-demo` runs the real parser and filters against three bundled synthetic Gmail-shaped messages. It does not open OAuth, contact Gmail or Sheets, or read/write the local checkpoint. The sample includes one interview invite, one newsletter, and one unrelated notice. It is safe for first-run setup checks; the normal `--dry-run` still reads the user's inbox.
 
-Use the preview first to see match counts before enabling spreadsheet writes and marking processed email as read. Add `--export-csv PATH` to save only matched rows from that read-only preview in spreadsheet-ready CSV format. Message bodies stay blank unless `STORE_EMAIL_BODY=true`; the CSV can contain sender and subject details, so keep it private and do not commit it. CSV formula-like values are escaped for spreadsheet safety.
+Use the preview first to see match counts before enabling spreadsheet writes. Add `--export-csv PATH` to save only matched rows from that read-only preview in spreadsheet-ready CSV format. Message bodies stay blank unless `STORE_EMAIL_BODY=true`; the CSV can contain sender and subject details, so keep it private and do not commit it. CSV formula-like values are escaped for spreadsheet safety.
 
 Use `--since YYYY-MM-DD` to scan unread messages received after a date, and repeat `--job-keyword WORD` to include role-specific terms in job matching. `--status` reports local processed and pending counts without opening Gmail or Sheets.
 
-The dry-run summary separates blocked senders from messages without job signals, helping you tune filtering. Add `--explain-matches` to log only which job keyword labels matched; it never logs sender, subject, or body. Sender values are stored as email addresses when the header includes a display name. Add `--keep-unread` to write and checkpoint matches while leaving Gmail's unread labels in place; processed messages will not be logged twice on later runs. See `docs/ARCHITECTURE.md` and `docs/FEATURE_ROADMAP.md` for current design and next steps.
+The dry-run summary separates blocked senders from messages without job signals, helping you tune filtering. Add `--explain-matches` to log only which job keyword labels matched; it never logs sender, subject, or body. Sender values are stored as email addresses when the header includes a display name. Normal runs write and checkpoint matches while leaving Gmail's unread labels in place; processed messages will not be logged twice on later runs. Use `--mark-read` only if you explicitly want JobMail to remove the UNREAD label. See `docs/ARCHITECTURE.md` and `docs/FEATURE_ROADMAP.md` for current design and next steps.
 
 `--receipt-jsonl PATH` appends an optional local processing receipt for each message outcome. It contains Gmail message IDs, outcome labels, and UTC timestamps only; protect or delete the file like other local account data.
 
@@ -203,7 +202,8 @@ The project uses the OAuth 2.0 Installed App flow.
 ### On First Run:
 - Browser window opens
 - Preview grants Gmail read-only access and creates `token-readonly.json` locally
-- Normal run grants Gmail and Sheets access and creates `token.json` locally
+- Normal run grants Gmail read-only and Sheets access and creates `token.json` locally
+- `--mark-read` requests Gmail modify access so the script can remove the UNREAD label
 
 ### On Subsequent Runs:
 - Stored token is reused

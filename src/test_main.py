@@ -43,12 +43,32 @@ class MessageProcessingTests(unittest.TestCase):
 
     def test_replay_demo_rejects_gmail_side_effect_flags(self):
         with patch("main.logger.error") as log_error, patch("main.get_gmail_service") as get_service:
-            main(replay_demo=True, keep_unread=True)
+            main(replay_demo=True, keep_unread=False)
         log_error.assert_called_once()
         get_service.assert_not_called()
 
+    def test_normal_run_keeps_gmail_read_only_unless_mark_read_is_selected(self):
+        shared_patches = (
+            patch("main.get_gmail_service", return_value=Mock()),
+            patch("main.get_sheets_service"),
+            patch("main.get_unread_messages", return_value=[]),
+            patch("main.load_state", return_value={"processed_ids": set(), "pending_ids": set()}),
+            patch("main.logger.info"),
+            patch("main.SPREADSHEET_ID", "sheet-id"),
+        )
+        with shared_patches[0] as get_service, shared_patches[1], shared_patches[2], \
+             shared_patches[3], shared_patches[4], shared_patches[5]:
+            main()
+        get_service.assert_called_once_with(read_only=True)
+
+        with shared_patches[0] as get_service, shared_patches[1], shared_patches[2], \
+             shared_patches[3], shared_patches[4], shared_patches[5]:
+            main(keep_unread=False)
+        get_service.assert_called_once_with(read_only=False)
+
     def test_job_platform_senders_are_not_blocked_by_platform_name(self):
         for sender in (
+            "no-reply@company.example",
             "Recruiter <recruiter@linkedin.com>",
             "jobs@internshala.com",
             "opportunities@unstop.com",
@@ -135,7 +155,7 @@ class MessageProcessingTests(unittest.TestCase):
         }
         emails = {
             "job": {"from": "recruiter@example.com", "subject": "Interview invite", "content": "Let's talk"},
-            "promo": {"from": "noreply@example.com", "subject": "Application tips", "content": "A newsletter"},
+            "promo": {"from": "newsletter@example.com", "subject": "Application tips", "content": "A newsletter"},
             "other": {"from": "person@example.com", "subject": "Welcome", "content": "Your account is ready"},
         }
         gmail = Mock()
@@ -158,7 +178,7 @@ class MessageProcessingTests(unittest.TestCase):
         state = {"processed_ids": set(), "pending_ids": set()}
         emails = {
             "job": {"from": "recruiter@example.com", "subject": "=Interview invite", "date": "2026-01-15", "content": "Private body"},
-            "noise": {"from": "noreply@example.com", "subject": "Application tips", "date": "2026-01-15", "content": "Newsletter"},
+            "noise": {"from": "newsletter@example.com", "subject": "Application tips", "date": "2026-01-15", "content": "Newsletter"},
         }
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "preview.csv"
@@ -172,6 +192,22 @@ class MessageProcessingTests(unittest.TestCase):
         self.assertEqual(result, (1, 1, 0, 0, 1, 0))
         self.assertEqual(rows[0], ["From", "Subject", "Date", "Content", "Gmail message ID"])
         self.assertEqual(rows[1], ["recruiter@example.com", "'=Interview invite", "2026-01-15", "", "job"])
+
+    def test_dry_run_csv_escapes_formula_prefixes_after_leading_whitespace(self):
+        state = {"processed_ids": set(), "pending_ids": set()}
+        email = {
+            "from": "recruiter@example.com", "subject": "  =HYPERLINK(\"https://bad.example\") interview",
+            "date": "2026-01-15", "content": "\n+SUM(1,1)",
+        }
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "preview.csv"
+            with patch("main.parse_email", return_value=email), patch("main.STORE_EMAIL_BODY", True):
+                preview_messages(Mock(), [{"id": "job"}], state, path)
+            with path.open(newline="", encoding="utf-8") as file:
+                row = list(csv.reader(file))[1]
+
+        self.assertEqual(row[1], "'  =HYPERLINK(\"https://bad.example\") interview")
+        self.assertEqual(row[3], "'\n+SUM(1,1)")
 
     def test_csv_export_requires_dry_run_before_authentication(self):
         with patch("main.get_gmail_service") as get_service, patch("main.logger.error"):

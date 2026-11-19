@@ -2,7 +2,6 @@ from html.parser import HTMLParser
 from pathlib import Path
 from xml.etree import ElementTree
 
-
 ROOT = Path(__file__).resolve().parents[1] / "site"
 
 
@@ -39,10 +38,14 @@ def main():
     html = (ROOT / "index.html").read_text(encoding="utf-8")
     parser.feed(html)
     assert parser.has_main and parser.has_title, "index needs a title and main landmark"
+    assert '<details class="mobile-nav">' in html and 'href="#how">How it works</a>' in html and 'href="#privacy">Privacy</a>' in html, "mobile section navigation is missing"
+    assert 'http-equiv="Content-Security-Policy"' in html, "the static page needs a restrictive content policy"
+    assert 'property="og:title"' in html and 'name="twitter:card"' in html, "social preview metadata is missing"
+    assert 'type="application/ld+json"' in html, "software structured data is missing"
     assert all(fragment in parser.ids for fragment in parser.fragments), "broken in-page link"
     assert all(controlled_id in parser.ids for controlled_id in parser.controlled_ids), "broken aria-controls reference"
     assert {"sample-rows-toggle", "sample-rows", "sample-copy", "sample-copy-status"} <= parser.ids, "sample sheet preview controls are missing"
-    assert "mailto:yashrajsharma786jmd@gmail.com" in html, "paid setup contact path is missing"
+    assert "mailto:eatitall.founder@gmail.com" in html, "paid setup contact path is missing"
     assert "Don’t email passwords, OAuth tokens" in html, "contact safety guidance is missing"
     assert all((ROOT / asset).is_file() for asset in parser.assets), "missing local asset"
     assert not any(asset.startswith(("http://", "https://")) for asset in parser.assets), "remote runtime asset"

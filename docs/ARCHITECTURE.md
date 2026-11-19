@@ -26,7 +26,7 @@ flowchart LR
 
 ## ADR-001: local-first Gmail to user-owned Sheets
 
-**Decision:** Keep the first release as a local CLI, with read-only OAuth for preview and the existing write scope only for an explicit normal run. Store only message IDs in local recovery state. Use a user-owned Sheet as the destination rather than building hosted accounts or a new database.
+**Decision:** Keep the first release as a local CLI. Gmail access is read-only by default for both preview and normal runs; `--mark-read` explicitly requests the broader modify scope. Store only message IDs in local recovery state. Use a user-owned Sheet as the destination rather than building hosted accounts or a new database.
 
 **Reason:** The current code and README already provide a Gmail-to-Sheets workflow; local execution avoids collecting inbox data on a new server and keeps provider credentials out of a SaaS backend.
 
@@ -38,7 +38,7 @@ flowchart LR
 
 1. Preview with `python src/main.py --dry-run` before any write.
 2. If a Sheet append succeeds but local checkpointing is interrupted, pending message IDs are reconciled against the sheet's `Gmail message ID` column before retrying.
-3. Do not remove Gmail's unread label until the checkpoint is saved. `--keep-unread` leaves the label in place.
+3. Keep Gmail's unread label by default. Remove it only when the user selects `--mark-read`, after the checkpoint is saved.
 4. Keep `.env`, OAuth credentials, token files, generated CSV exports, and checkpoints out of Git. Revoke OAuth access in the Google account when the user stops using the tool.
 
 No hosted API, account system, billing service, or production monitoring is part of this architecture.
