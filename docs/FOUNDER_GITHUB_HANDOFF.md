@@ -10,7 +10,7 @@ Updated: 2026-11-19
 - Default branch: `main`
 - Vercel production URL (founder `EatItOut` team): `https://jobmail-ruby.vercel.app/`
 - GitHub Pages fallback: `https://founderhouseventures-coder.github.io/applypost/`
-- Public contact address in the site: `eatitall.founder@gmail.com`; mailbox ownership and receive path are still unverified.
+- Public contact address in the site: `founderhouse.ventures@gmail.com`; the address received and completed Vercel identity verification.
 
 ## Completed handoff state
 

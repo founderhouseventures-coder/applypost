@@ -2,20 +2,16 @@
 
 These steps need the founder's Google account and a dedicated test inbox. No OAuth client credentials, token, `.env`, or spreadsheet ID are present in this worktree. Do not upload credentials or inbox data to GitHub or Vercel.
 
-## 1. Verify the public contact inbox
+The public contact address is `founderhouse.ventures@gmail.com`; it received and completed Vercel identity verification.
 
-1. Sign in to [`eatitall.founder@gmail.com`](https://mail.google.com/) and complete any Google verification prompt.
-2. From a separate mailbox, send a test message to `eatitall.founder@gmail.com`; confirm it arrives. The Vercel verification used `founderhouse.ventures@gmail.com`, so it does not prove this public contact inbox works.
-3. The site's public contact link is `mailto:eatitall.founder@gmail.com`.
-
-## 2. Create a founder-controlled Google OAuth client
+## 1. Create a founder-controlled Google OAuth client
 
 1. Open [Google Cloud Console](https://console.cloud.google.com/) while signed in as the founder.
 2. Create/select a project, then enable **Gmail API** and **Google Sheets API**.
 3. Configure the OAuth consent screen as **External**, add only the dedicated test inbox as a test user, and create an OAuth client of type **Desktop app**.
 4. Download its client JSON into the local repository folder `credentials/credentials.json`. Keep that file private and untracked.
 
-## 3. Set up a disposable test sheet and run the checks
+## 2. Set up a disposable test sheet and run the checks
 
 1. Create a blank Google Sheet under the founder account and copy its ID from the URL between `/d/` and `/edit`.
 2. Copy `.env.example` to `.env` locally, then set:
