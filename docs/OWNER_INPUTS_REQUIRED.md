@@ -28,8 +28,15 @@ The public contact address is `founderhouse.ventures@gmail.com`; it received and
 6. Do not run `--mark-read` without a separate explicit decision; it requests broader Gmail modify access.
 7. Revoke the test OAuth token when finished. Public multi-user use still needs Google OAuth consent verification.
 
+## 3. Connect the shared LeadHub signup
+
+- JobMail's signup and recommendations stay hidden because `site/index.html` has an empty `leadhub-url` setting.
+- The local `EatItAll/03_LeadHub` service passed its 4 local tests, but it has no production URL. Its local git remote still points to the previous `YashRaJShaRMaCODE/leadhub` account and its worktree contains uncommitted changes; that repo was left untouched.
+- Before this funnel can go live under the founder account, migrate/recreate a clean LeadHub repo under `founderhouseventures-coder`, then deploy it. The current Render blueprint requires the Starter plan and persistent disk. Deployment also needs a public HTTPS `BASE_URL`, Resend account/API key, verified sender for `MAIL_FROM`, and generated `ADMIN_TOKEN`/per-project event keys. Keep all secret values in the service dashboard, not chat or GitHub.
+- Once the founder-owned service is live and its confirmation/unsubscribe flow is verified, provide its HTTPS origin. Then the JobMail widget can be configured and redeployed.
+
 ## Current evidence
 
-- Synthetic offline replay, 43 unit tests, Ruff, compile checks, static-site checks, and Node tests passed locally. GitHub CI and Vercel deployment are verified in the founder repo for the current published revision.
+- Synthetic offline replay, 43 JobMail unit tests, 4 LeadHub local tests, Ruff, compile checks, static-site checks, and Node tests passed locally. GitHub CI and Vercel deployment are verified in the founder repo for the current published revision.
 - Live production host: `https://jobmail-ruby.vercel.app/`.
-- Real OAuth, inbox read, and Sheets write have not been run because founder-controlled credentials and a disposable test inbox/sheet are not present locally.
+- Real OAuth, inbox read, Sheets write, and the shared signup have not been run against live services because the required local credentials, test inbox/sheet, and deployed LeadHub are not present.

@@ -15,7 +15,7 @@ Updated: 2026-11-19
 ## Completed handoff state
 
 - Public repository `founderhouseventures-coder/applypost` exists and `origin` points to it. Commit `4fb26c0` is on founder `main`.
-- GitHub Actions CI and Vercel both passed for `6a487c4`. Founder Vercel project `jobmail` serves production at `https://jobmail-ruby.vercel.app/`; the homepage, `robots.txt`, and `sitemap.xml` return HTTP 200, and live HTML uses the production host for canonical, Open Graph, and structured data URLs.
+- GitHub Actions CI and Vercel both passed for `5feff78`. Founder Vercel project `jobmail` serves production at `https://jobmail-ruby.vercel.app/`; the homepage, `robots.txt`, and `sitemap.xml` return HTTP 200, and live HTML uses the production host for canonical, Open Graph, and structured data URLs.
 - Sheets access now requests only the Sheets scope; Gmail modify permission is reserved for the deliberate `--mark-read` option.
 - The local Git author is set to `Founder House Ventures <eatitall.founder@gmail.com>` for new commits. Verify the address on GitHub before relying on its attribution or accepting inquiries.
 - `vercel.json` is ready to publish only the `site/` directory and set response security headers. `.vercel/` is ignored.
