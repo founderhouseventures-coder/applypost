@@ -93,7 +93,7 @@ else:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
+            "NAME": os.environ.get("SQLITE_PATH", BASE_DIR / "db.sqlite3"),
         }
     }
 
@@ -148,9 +148,12 @@ PRO_PRICE_DISPLAY = os.environ.get("PRO_PRICE_DISPLAY", "₹299 / month")
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
-SECURE_SSL_REDIRECT = os.environ.get("SECURE_SSL_REDIRECT", "false").lower() == "true"
+SECURE_SSL_REDIRECT = os.environ.get(
+    "SECURE_SSL_REDIRECT", "false" if DEBUG else "true"
+).lower() == "true"
 SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
 SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
+SECURE_HSTS_PRELOAD = not DEBUG
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
 SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"

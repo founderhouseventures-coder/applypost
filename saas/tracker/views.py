@@ -1,5 +1,6 @@
 import csv
-import json
+import io
+import secrets
 
 import requests
 from django.conf import settings
@@ -9,12 +10,16 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.core import signing
 from django.core.mail import send_mail
-from django.db import connection, transaction
+from django.core.paginator import Paginator
+from django.db import DatabaseError, connection, transaction
+from django.db.models import Q
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
+from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_safe
 
 from .forms import JobApplicationForm, SignUpForm
 from .models import (
@@ -25,12 +30,17 @@ from .models import (
 )
 from .services import (
     BillingConfigurationError,
+    BillingSubscriptionPending,
     billing_available,
     create_subscription,
     parse_verified_event,
     update_subscription_from_event,
     verify_webhook_signature,
 )
+
+IMPORT_PREVIEW_KEY = "jobmail_import_preview"
+IMPORT_MAX_BYTES = 1024 * 1024
+IMPORT_MAX_ROWS = 100
 
 
 def home(request):
@@ -99,51 +109,89 @@ def activate(request, token):
     return redirect("dashboard")
 
 
-@login_required
-def dashboard(request):
-    applications = JobApplication.objects.filter(user=request.user)
+def dashboard_context(request, form=None):
+    all_applications = JobApplication.objects.filter(user=request.user)
+    applications = all_applications
+    search_query = request.GET.get("q", "").strip()[:120]
+    status_filter = request.GET.get("status", "")
+    follow_up_filter = request.GET.get("follow_up", "")
+    valid_statuses = {value for value, _ in JobApplication.Status.choices}
+    if search_query:
+        applications = applications.filter(
+            Q(company__icontains=search_query)
+            | Q(role__icontains=search_query)
+            | Q(source__icontains=search_query)
+        )
+    if status_filter in valid_statuses:
+        applications = applications.filter(status=status_filter)
+    else:
+        status_filter = ""
+    if follow_up_filter == "due":
+        applications = applications.filter(
+            follow_up_on__lte=timezone.localdate(),
+            status__in=["saved", "applied", "interview"],
+        )
+    else:
+        follow_up_filter = ""
+    page_obj = Paginator(applications, 25).get_page(request.GET.get("page"))
     counts = {
-        status: applications.filter(status=status).count()
+        status: all_applications.filter(status=status).count()
         for status, _ in JobApplication.Status.choices
     }
-    return render(
-        request,
-        "tracker/dashboard.html",
-        {
-            "applications": applications[:100],
-            "counts": counts,
-            "form": JobApplicationForm(),
-            "subscription": getattr(request.user, "billing_subscription", None),
-            "price": settings.PRO_PRICE_DISPLAY,
-            "billing_ready": billing_available(),
-        },
-    )
+    return {
+        "applications": page_obj.object_list,
+        "page_obj": page_obj,
+        "counts": counts,
+        "total_count": sum(counts.values()),
+        "search_query": search_query,
+        "status_filter": status_filter,
+        "follow_up_filter": follow_up_filter,
+        "status_choices": JobApplication.Status.choices,
+        "form": form or JobApplicationForm(),
+        "subscription": getattr(request.user, "billing_subscription", None),
+        "price": settings.PRO_PRICE_DISPLAY,
+        "billing_ready": billing_available(),
+    }
+
+
+@login_required
+def dashboard(request):
+    return render(request, "tracker/dashboard.html", dashboard_context(request))
 
 
 @login_required
 @require_POST
 def add_application(request):
-    subscription = BillingSubscription.objects.filter(
-        user=request.user, status="active"
-    ).exists()
-    if (
-        not subscription
-        and JobApplication.objects.filter(user=request.user).count() >= 25
-    ):
-        messages.error(
-            request,
-            "Free beta includes 25 tracked applications. "
-            "Upgrade to continue adding more.",
-        )
-        return redirect("dashboard")
     form = JobApplicationForm(request.POST)
     if form.is_valid():
-        application = form.save(commit=False)
-        application.user = request.user
-        application.save()
+        with transaction.atomic():
+            user = User.objects.select_for_update().get(pk=request.user.pk)
+            subscription = BillingSubscription.objects.filter(
+                user=user, status="active"
+            ).exists()
+            if (
+                not subscription
+                and JobApplication.objects.filter(user=user).count() >= 25
+            ):
+                capacity_reached = True
+            else:
+                application = form.save(commit=False)
+                application.user = user
+                application.save()
+                capacity_reached = False
+        if capacity_reached:
+            messages.error(
+                request,
+                "Free beta includes 25 tracked applications. "
+                "Upgrade to continue adding more.",
+            )
+            return redirect("dashboard")
         messages.success(request, "Application saved.")
     else:
         messages.error(request, "Check the application fields and try again.")
+        return render(
+            request, "tracker/dashboard.html", dashboard_context(request, form)
+        )
     return redirect("dashboard")
 
 
@@ -211,6 +259,187 @@ def export_data(request):
             ]
         )
     return response
+
+
+def _import_context(request):
+    active = BillingSubscription.objects.filter(
+        user=request.user, status="active"
+    ).exists()
+    tracked = JobApplication.objects.filter(user=request.user).count()
+    remaining = None if active else max(0, 25 - tracked)
+    return {
+        "preview": request.session.get(IMPORT_PREVIEW_KEY),
+        "remaining_slots": remaining,
+        "unlimited": active,
+    }
+
+
+@login_required
+def import_applications(request):
+    if request.method == "GET":
+        return render(request, "tracker/import_page.html", _import_context(request))
+
+    if request.POST.get("confirm") == "yes":
+        preview = request.session.get(IMPORT_PREVIEW_KEY)
+        if (
+            not preview
+            or not preview.get("rows")
+            or request.POST.get("preview_id") != preview.get("id")
+        ):
+            messages.error(request, "Upload a CSV and review its preview first.")
+            return redirect("import_applications")
+        rows = preview["rows"]
+        capacity_error = None
+        stale_preview = False
+        with transaction.atomic():
+            user = User.objects.select_for_update().get(pk=request.user.pk)
+            active = BillingSubscription.objects.filter(
+                user=user, status="active"
+            ).exists()
+            tracked = JobApplication.objects.filter(user=user).count()
+            remaining = None if active else max(0, 25 - tracked)
+            if remaining is not None and len(rows) > remaining:
+                noun = "application" if remaining == 1 else "applications"
+                capacity_error = (
+                    f"Your free beta has room for {remaining} more {noun}; "
+                    f"this preview has {len(rows)} valid rows. Remove some rows "
+                    "from the CSV or free up space, then upload it again."
+                )
+            else:
+                existing = {
+                    (company.strip().casefold(), role.strip().casefold())
+                    for company, role in JobApplication.objects.filter(
+                        user=user
+                    ).values_list("company", "role")
+                }
+                applications = []
+                for row in rows:
+                    form = JobApplicationForm(row)
+                    if not form.is_valid():
+                        stale_preview = True
+                        break
+                    data = form.cleaned_data
+                    key = (
+                        data["company"].strip().casefold(),
+                        data["role"].strip().casefold(),
+                    )
+                    if key in existing:
+                        stale_preview = True
+                        break
+                    existing.add(key)
+                    applications.append(JobApplication(user=user, **data))
+                if not stale_preview:
+                    JobApplication.objects.bulk_create(applications)
+        if capacity_error:
+            preview["capacity_error"] = capacity_error
+            request.session[IMPORT_PREVIEW_KEY] = preview
+            messages.error(request, capacity_error)
+            return render(request, "tracker/import_page.html", _import_context(request))
+        if stale_preview:
+            messages.error(
+                request,
+                "Your applications changed after preview. Upload the CSV again.",
+            )
+            return redirect("import_applications")
+        request.session.pop(IMPORT_PREVIEW_KEY, None)
+        messages.success(request, f"Imported {len(applications)} applications.")
+        return redirect("dashboard")
+
+    request.session.pop(IMPORT_PREVIEW_KEY, None)
+    uploaded = request.FILES.get("file")
+    if not uploaded:
+        messages.error(request, "Choose a CSV file to preview.")
+        return redirect("import_applications")
+    if uploaded.size > IMPORT_MAX_BYTES:
+        messages.error(request, "CSV files must be 1 MB or smaller.")
+        return redirect("import_applications")
+    try:
+        content = uploaded.read().decode("utf-8-sig")
+        reader = csv.DictReader(io.StringIO(content, newline=""))
+        columns = {
+            "company": "company",
+            "role": "role",
+            "status": "status",
+            "source": "source",
+            "job url": "job_url",
+            "applied on": "applied_on",
+            "follow-up": "follow_up_on",
+            "notes": "notes",
+        }
+        source_columns = {
+            str(name).strip().casefold(): name for name in (reader.fieldnames or [])
+        }
+        if not {"company", "role"}.issubset(source_columns):
+            raise ValueError("CSV needs Company and Role columns.")
+        status_values = {
+            label.casefold(): value for value, label in JobApplication.Status.choices
+        }
+        status_values.update(
+            {value.casefold(): value for value, _ in JobApplication.Status.choices}
+        )
+        existing = {
+            (company.strip().casefold(), role.strip().casefold())
+            for company, role in JobApplication.objects.filter(
+                user=request.user
+            ).values_list("company", "role")
+        }
+        rows, errors = [], []
+        data_rows = 0
+        for line, raw in enumerate(reader, start=2):
+            if not raw or not any(str(value or "").strip() for value in raw.values()):
+                continue
+            data_rows += 1
+            if data_rows > IMPORT_MAX_ROWS:
+                raise ValueError(f"CSV is limited to {IMPORT_MAX_ROWS} data rows.")
+            normalized = {
+                str(key).strip().casefold(): value for key, value in raw.items() if key
+            }
+            data = {
+                target: str(normalized.get(header, "") or "").strip()
+                for header, target in columns.items()
+                if header in source_columns
+            }
+            raw_status = data.get("status", "").casefold()
+            data["status"] = status_values.get(raw_status, raw_status) or "saved"
+            form = JobApplicationForm(data)
+            if not form.is_valid():
+                detail = "; ".join(
+                    f"{field}: {', '.join(str(message) for message in messages)}"
+                    for field, messages in form.errors.items()
+                )
+                errors.append({"line": line, "message": detail})
+                continue
+            cleaned = form.cleaned_data
+            key = (cleaned["company"].casefold(), cleaned["role"].casefold())
+            if key in existing:
+                errors.append(
+                    {"line": line, "message": "Duplicate company and role; skipped."}
+                )
+                continue
+            existing.add(key)
+            rows.append(
+                {
+                    field: value.isoformat() if hasattr(value, "isoformat") else value
+                    for field, value in cleaned.items()
+                }
+            )
+    except (UnicodeDecodeError, csv.Error, ValueError) as error:
+        messages.error(request, str(error) or "This file is not a valid UTF-8 CSV.")
+        return redirect("import_applications")
+
+    preview = {"id": secrets.token_urlsafe(16), "rows": rows, "errors": errors}
+    context = _import_context(request)
+    remaining = context["remaining_slots"]
+    if remaining is not None and len(rows) > remaining:
+        noun = "application" if remaining == 1 else "applications"
+        preview["capacity_error"] = (
+            f"Your free beta has room for {remaining} more {noun}; "
+            f"this preview has {len(rows)} valid rows. Remove some rows "
+            "from the CSV or free up space, then upload it again."
+        )
+    request.session[IMPORT_PREVIEW_KEY] = preview
+    request.session.set_expiry(10 * 60)
+    return redirect("import_applications")
 
 
 @login_required
@@ -323,7 +552,13 @@ def razorpay_webhook(request):
         event = parse_verified_event(request.body)
         event_id = request.headers.get("X-Razorpay-Event-Id")
         event_type = event.get("event")
-        if not event_id or not event_type:
+        if (
+            not event_id
+            or len(event_id) > 120
+            or not isinstance(event_type, str)
+            or not event_type
+            or len(event_type) > 100
+        ):
             return HttpResponseBadRequest("Missing event metadata")
         with transaction.atomic():
             _, created = BillingEvent.objects.get_or_create(
@@ -331,15 +566,20 @@ def razorpay_webhook(request):
             )
             if created:
                 update_subscription_from_event(event)
-    except (ValueError, TypeError, json.JSONDecodeError):
+    except BillingSubscriptionPending:
+        return HttpResponse("Subscription is not recorded yet", status=503)
+    except ValueError:
         return HttpResponseBadRequest("Invalid webhook payload")
     return HttpResponse(status=200)
 
 
+@never_cache
+@require_safe
 def health(request):
     try:
-        connection.ensure_connection()
-    except Exception:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+    except DatabaseError:
         return JsonResponse({"status": "unavailable"}, status=503)
     return JsonResponse({"status": "ok"})
 
@@ -347,6 +587,7 @@ def health(request):
 def robots_txt(request):
     return HttpResponse(
         "User-agent: *\nAllow: /\nDisallow: /dashboard/\nDisallow: /accounts/\n"
+        + "Sitemap: "
         + request.build_absolute_uri(reverse("sitemap"))
         + "\n",
         content_type="text/plain",

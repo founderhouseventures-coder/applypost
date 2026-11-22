@@ -1,3 +1,28 @@
 {% extends "tracker/base.html" %}
 {% block title %}{{ title }} · JobMail{% endblock %}
-{% block content %}<section class="form-card"><p class="eyebrow">JOBMAIL ACCOUNT</p><h1>{{ title }}</h1><form method="post">{% csrf_token %}{{ form.as_p }}{% if request.resolver_match.url_name == 'signup' %}<label class="consent"><input type="checkbox" name="product_updates" value="on"> Email me occasional product updates. I can unsubscribe any time.</label>{% endif %}<button class="button primary">{{ submit|default:"Continue" }}</button></form><p><a href="{% url 'login' %}">Back to sign in</a></p></section>{% endblock %}
+{% block content %}
+<section class="form-card">
+  <p class="eyebrow">JOBMAIL ACCOUNT</p>
+  <h1>{{ title }}</h1>
+  <form method="post">
+    {% csrf_token %}
+    {% if request.resolver_match.url_name == 'signup' %}
+      {% for field in form %}
+        {% if field.name != 'product_updates' %}
+          <p>
+            {{ field.label_tag }}
+            {{ field }}
+            {{ field.errors }}
+            {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+          </p>
+        {% endif %}
+      {% endfor %}
+      <label class="consent">{{ form.product_updates }} Email me occasional product updates. I can unsubscribe any time.</label>
+    {% else %}
+      {{ form.as_p }}
+    {% endif %}
+    <button class="button primary">{{ submit|default:"Continue" }}</button>
+  </form>
+  <p><a href="{% url 'login' %}">Back to sign in</a></p>
+</section>
+{% endblock %}

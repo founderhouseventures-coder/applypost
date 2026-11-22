@@ -1,0 +1,47 @@
+{% extends "tracker/base.html" %}
+{% block title %}Import applications · JobMail{% endblock %}
+{% block content %}
+<section class="form-card import-card">
+  <p class="eyebrow">MOVE YOUR PIPELINE</p>
+  <h1>Import applications</h1>
+  <p>Use a JobMail export or a CSV with Company and Role columns. Preview checks duplicates and field errors before anything is saved.</p>
+  <ul class="import-limits">
+    <li>Maximum file size: 1 MB</li>
+    <li>Maximum rows: 100 per import</li>
+    {% if unlimited %}<li>Pro account: no free-beta import cap</li>{% else %}<li>{{ remaining_slots }} free-beta slots available</li>{% endif %}
+  </ul>
+  <form method="post" enctype="multipart/form-data" class="job-form import-upload">
+    {% csrf_token %}
+    <label for="csv-file">CSV file</label>
+    <input id="csv-file" type="file" name="file" accept=".csv,text/csv" required>
+    <button class="button primary" type="submit">Preview import</button>
+  </form>
+  {% if preview %}
+    <section class="import-preview" aria-labelledby="preview-title">
+      <h2 id="preview-title">Import preview</h2>
+      <p>{{ preview.rows|length }} valid row{{ preview.rows|length|pluralize }} · {{ preview.errors|length }} duplicates or rows with errors</p>
+      <p>No applications are saved until you confirm. This preview expires after 10 minutes.</p>
+      {% if preview.capacity_error %}<p class="import-warning" role="alert">{{ preview.capacity_error }}</p>{% endif %}
+      {% if preview.errors %}
+        <details>
+          <summary>Review skipped rows</summary>
+          <ul class="import-errors">{% for error in preview.errors %}<li>Row {{ error.line }}: {{ error.message }}</li>{% endfor %}</ul>
+        </details>
+      {% endif %}
+      {% if preview.rows %}
+        <div class="import-table-wrap">
+          <table class="import-table">
+            <thead><tr><th>Company</th><th>Role</th><th>Status</th><th>Follow-up</th></tr></thead>
+            <tbody>{% for row in preview.rows %}<tr><td>{{ row.company }}</td><td>{{ row.role }}</td><td>{{ row.status|capfirst }}</td><td>{{ row.follow_up_on|default:"—" }}</td></tr>{% endfor %}</tbody>
+          </table>
+        </div>
+        <form method="post" class="import-confirm">
+          {% csrf_token %}<input type="hidden" name="confirm" value="yes"><input type="hidden" name="preview_id" value="{{ preview.id }}">
+          <button class="button primary" type="submit" {% if preview.capacity_error %}disabled{% endif %}>Import {{ preview.rows|length }} valid row{{ preview.rows|length|pluralize }}</button>
+        </form>
+      {% endif %}
+    </section>
+  {% endif %}
+  <p><a href="{% url 'dashboard' %}">Back to your pipeline</a></p>
+</section>
+{% endblock %}

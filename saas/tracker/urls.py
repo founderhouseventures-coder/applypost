@@ -9,6 +9,7 @@ urlpatterns = [
     path("activate/<str:token>/", views.activate, name="activate"),
     path("dashboard/", views.dashboard, name="dashboard"),
     path("applications/add/", views.add_application, name="add_application"),
+    path("applications/import/", views.import_applications, name="import_applications"),
     path(
         "applications/<int:pk>/delete/",
         views.delete_application,

@@ -10,6 +10,10 @@ class BillingConfigurationError(RuntimeError):
     pass
 
 
+class BillingSubscriptionPending(RuntimeError):
+    pass
+
+
 def billing_available():
     if not all(
         (
@@ -69,16 +73,28 @@ def create_subscription(user):
 
 
 def verify_webhook_signature(body, signature):
-    if not settings.RAZORPAY_WEBHOOK_SECRET or not signature:
+    if (
+        not settings.RAZORPAY_WEBHOOK_SECRET
+        or not isinstance(signature, str)
+        or len(signature) != 64
+    ):
+        return False
+    try:
+        actual = bytes.fromhex(signature)
+    except ValueError:
         return False
     expected = hmac.new(
         settings.RAZORPAY_WEBHOOK_SECRET.encode(), body, hashlib.sha256
-    ).hexdigest()
-    return hmac.compare_digest(expected, signature)
+    ).digest()
+    return hmac.compare_digest(expected, actual)
 
 
 def update_subscription_from_event(event):
-    payload = event.get("payload", {}).get("subscription", {}).get("entity", {})
+    payload = event
+    for field in ("payload", "subscription", "entity"):
+        payload = payload.get(field, {})
+        if not isinstance(payload, dict):
+            raise ValueError("Invalid subscription event structure.")
     provider_id = payload.get("id")
     status = payload.get("status")
     allowed = {
@@ -91,27 +107,38 @@ def update_subscription_from_event(event):
         "completed",
         "paused",
     }
-    if provider_id and status in allowed:
+    if (
+        isinstance(provider_id, str)
+        and provider_id
+        and isinstance(status, str)
+        and status in allowed
+    ):
         from .models import BillingSubscription
 
-        subscription = BillingSubscription.objects.filter(
-            provider_id=provider_id
-        ).first()
-        if subscription:
-            if subscription.status in {"cancelled", "completed"} and status not in {
-                "cancelled",
-                "completed",
-            }:
-                return
-            if subscription.status == "active" and status in {
-                "created",
-                "authenticated",
-                "pending",
-            }:
-                return
-            subscription.status = status
-            subscription.save(update_fields=["status", "updated_at"])
+        subscription = (
+            BillingSubscription.objects.select_for_update()
+            .filter(provider_id=provider_id)
+            .first()
+        )
+        if subscription is None:
+            raise BillingSubscriptionPending
+        if subscription.status in {"cancelled", "completed"} and status not in {
+            "cancelled",
+            "completed",
+        }:
+            return
+        if subscription.status == "active" and status in {
+            "created",
+            "authenticated",
+            "pending",
+        }:
+            return
+        subscription.status = status
+        subscription.save(update_fields=["status", "updated_at"])
 
 
 def parse_verified_event(body):
-    return json.loads(body.decode("utf-8"))
+    event = json.loads(body.decode("utf-8"))
+    if not isinstance(event, dict):
+        raise ValueError("Webhook event must be an object.")
+    return event

@@ -22,6 +22,8 @@ In local development, account activation and password-reset messages print to th
 - Signup creates an inactive account and sends a signed, 24-hour activation link.
 - Django provides login, logout, and password reset. Reset/activation emails require SMTP configuration outside local development.
 - Users can create, edit, delete, and export their own applications. Other users' records are scoped out.
+- The dashboard can search company, role, and source; filter by status and due/overdue follow-up; and paginate while retaining filters.
+- CSV import accepts the JobMail export format, previews rows, validates fields, skips duplicates, and saves only after confirmation. Uploads are limited to 1 MB and 100 rows; the free-beta cap is enforced before importing.
 - Free beta allows 25 tracked applications. Pro is intended to remove that cap; payment is unavailable until a Razorpay plan and test keys are configured.
 - Account removal is blocked while a provider subscription can still bill. Cancel and wait for provider confirmation first.
 - Product update consent is optional and unchecked by default. No marketing sequence is sent by this app yet.
@@ -50,4 +52,4 @@ python manage.py test tracker
 python manage.py collectstatic --noinput
 ```
 
-Tests cover login isolation, application creation/export/delete, missing billing configuration, and signed/idempotent webhook intake. They do not prove live email, Razorpay, or deployment behavior.
+Tests cover login isolation, application create/edit/export/delete, CSV import preview and limits, search/status/follow-up filters, missing billing configuration, and signed/idempotent webhook intake. They do not prove live email, Razorpay, or deployment behavior.
