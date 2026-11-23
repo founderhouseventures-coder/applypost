@@ -47,6 +47,7 @@ MIDDLEWARE = (
         "django.middleware.common.CommonMiddleware",
         "django.middleware.csrf.CsrfViewMiddleware",
         "django.contrib.auth.middleware.AuthenticationMiddleware",
+        "jobmail.throttle.RequestThrottle",
         "django.contrib.messages.middleware.MessageMiddleware",
         "django.middleware.clickjacking.XFrameOptionsMiddleware",
     ]
@@ -93,7 +94,7 @@ else:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
-            "NAME": os.environ.get("SQLITE_PATH", BASE_DIR / "db.sqlite3"),
+            "NAME": os.environ.get("SQLITE_PATH", str(BASE_DIR / "db.sqlite3")),
         }
     }
 
@@ -145,12 +146,17 @@ RAZORPAY_PLAN_ID = os.environ.get("RAZORPAY_PLAN_ID", "")
 RAZORPAY_MODE = os.environ.get("RAZORPAY_MODE", "test").lower()
 LIVE_BILLING_ENABLED = os.environ.get("LIVE_BILLING_ENABLED", "false").lower() == "true"
 PRO_PRICE_DISPLAY = os.environ.get("PRO_PRICE_DISPLAY", "₹299 / month")
+LEADHUB_BASE_URL = os.environ.get("LEADHUB_BASE_URL", "").rstrip("/")
+RAZORPAY_PILOT_TEST_ENABLED = (
+    os.environ.get("RAZORPAY_PILOT_TEST_ENABLED", "").lower() == "true"
+)
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
-SECURE_SSL_REDIRECT = os.environ.get(
-    "SECURE_SSL_REDIRECT", "false" if DEBUG else "true"
-).lower() == "true"
+SECURE_SSL_REDIRECT = (
+    os.environ.get("SECURE_SSL_REDIRECT", "false" if DEBUG else "true").lower()
+    == "true"
+)
 SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
 SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
 SECURE_HSTS_PRELOAD = not DEBUG
@@ -169,3 +175,13 @@ if os.environ.get("SENTRY_DSN"):
         traces_sample_rate=0.05,
         environment="production" if not DEBUG else "development",
     )
+
+
+if rate_limit_cache_url := os.getenv("RATE_LIMIT_CACHE_URL"):
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": rate_limit_cache_url,
+            "KEY_PREFIX": "applypost",
+        }
+    }

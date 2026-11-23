@@ -1,0 +1,9 @@
+{% extends "tracker/base.html" %}
+{% block title %}{{ title }} · JobMail{% endblock %}
+{% block content %}
+<section class="panel">
+  <h1>{{ title }}</h1>
+  <p>{{ detail }}</p>
+  <p><a href="{% url 'home' %}">Return home</a></p>
+</section>
+{% endblock %}

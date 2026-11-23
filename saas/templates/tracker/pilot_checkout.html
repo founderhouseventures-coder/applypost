@@ -1,0 +1,14 @@
+{% extends "tracker/base.html" %}
+{% load static %}
+{% block title %}ApplyPost pilot test checkout{% endblock %}
+{% block content %}
+<section class="section">
+  <h1>ApplyPost pilot checkout</h1>
+  <p>₹299 one-time pilot in Razorpay test mode.</p>
+  <p id="pilot-status" role="status"></p>
+  <button class="button primary" id="pilot-pay" data-key="{{ key }}" data-order="{{ order_id }}" data-amount="{{ amount }}">Open Razorpay test checkout</button>
+  <p><a href="{% url 'dashboard' %}">Back to the tracker</a></p>
+</section>
+<script defer src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script defer src="{% static 'pilot-checkout.js' %}"></script>
+{% endblock %}

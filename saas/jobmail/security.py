@@ -4,10 +4,27 @@ class SaaSSecurityHeadersMiddleware:
 
     def __call__(self, request):
         response = self.get_response(request)
+        checkout = (
+            request.resolver_match is not None
+            and request.resolver_match.url_name == "pilot_checkout"
+            and response.status_code == 200
+        )
+        scripts = " https://checkout.razorpay.com" if checkout else ""
+        connections = (
+            " https://api.razorpay.com https://checkout.razorpay.com"
+            if checkout
+            else ""
+        )
+        frames = (
+            "frame-src https://api.razorpay.com https://checkout.razorpay.com; "
+            if checkout
+            else ""
+        )
         response["Content-Security-Policy"] = (
             "default-src 'self'; base-uri 'self'; form-action 'self'; "
             "frame-ancestors 'none'; img-src 'self' data:; object-src 'none'; "
-            "script-src 'self'; style-src 'self'; font-src 'self'; connect-src 'self'; "
+            f"script-src 'self'{scripts}; style-src 'self'; font-src 'self'; "
+            f"connect-src 'self'{connections}; {frames}"
             "upgrade-insecure-requests"
         )
         response["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"

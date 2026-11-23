@@ -399,6 +399,65 @@ class ProductFlowTests(TestCase):
         self.assertEqual(response.content.count(b'name="product_updates"'), 1)
         self.assertContains(response, "Email me occasional product updates")
 
+    @override_settings(
+        EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+        RAZORPAY_KEY_ID="rzp_test_fake",
+        RAZORPAY_KEY_SECRET="test-secret",
+        RAZORPAY_PLAN_ID="plan_test",
+        RAZORPAY_MODE="test",
+    )
+    @patch("tracker.services.requests.post")
+    def test_signup_to_checkout_preserves_an_existing_subscription(self, post):
+        response = self.client.post(reverse("signup"), {
+            "username": "journey-jobseeker", "email": "journey@example.test",
+            "password1": "A-long-unique-password-824!",
+            "password2": "A-long-unique-password-824!",
+        })
+        self.assertRedirects(response, reverse("login"))
+        activation_path = urlparse(mail.outbox[0].body.strip().split()[-1]).path
+        self.assertRedirects(self.client.get(activation_path), reverse("dashboard"))
+        user = User.objects.get(username="journey-jobseeker")
+        entry = self.client.post(reverse("add_application"), {
+            "company": "Journey Co", "role": "Engineer", "status": "applied",
+        })
+        self.assertRedirects(entry, reverse("dashboard"))
+        self.assertIn(b"Journey Co", self.client.get(reverse("export_data")).content)
+
+        checkout_url = "https://rzp.io/rzp/test-checkout"
+        post.return_value.json.return_value = {
+            "id": "sub_journey", "status": "created", "short_url": checkout_url,
+        }
+        self.assertRedirects(
+            self.client.post(reverse("checkout")),
+            checkout_url,
+            fetch_redirect_response=False,
+        )
+        subscription = BillingSubscription.objects.get(user=user)
+        self.assertEqual(subscription.provider_mode, "test")
+        for status in ("paused", "halted"):
+            with self.subTest(status=status):
+                subscription.status = status
+                subscription.save(update_fields=["status"])
+                self.assertRedirects(
+                    self.client.post(reverse("checkout")), reverse("dashboard"),
+                )
+                self.assertRedirects(
+                    self.client.post(reverse("delete_account"), {"confirm": "DELETE"}),
+                    reverse("dashboard"),
+                )
+                subscription.refresh_from_db()
+                self.assertEqual(subscription.provider_id, "sub_journey")
+                self.assertEqual(subscription.status, status)
+        post.assert_called_once()
+        subscription.status = "cancelled"
+        subscription.save(update_fields=["status"])
+        self.assertRedirects(
+            self.client.post(reverse("delete_account"), {"confirm": "DELETE"}),
+            reverse("home"),
+        )
+        self.assertFalse(User.objects.filter(pk=user.pk).exists())
+        self.assertFalse(JobApplication.objects.filter(company="Journey Co").exists())
+
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
     def test_password_reset_email_link_changes_password(self):
         response = self.client.post(

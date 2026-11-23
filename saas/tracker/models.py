@@ -1,3 +1,6 @@
+from datetime import timedelta
+from uuid import uuid4
+
 from django.conf import settings
 from django.db import models
 
@@ -63,3 +66,16 @@ class MarketingPreference(models.Model):
     )
     opted_in = models.BooleanField(default=False)
     updated_at = models.DateTimeField(auto_now=True)
+
+
+class PilotTrial(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="pilot_trial"
+    )
+    started_at = models.DateTimeField(auto_now_add=True)
+    receipt = models.UUIDField(default=uuid4, editable=False, unique=True)
+    order_id = models.CharField(max_length=80, blank=True)
+
+    @property
+    def ends_at(self):
+        return self.started_at + timedelta(days=14)

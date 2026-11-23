@@ -28,6 +28,12 @@ from .models import (
     JobApplication,
     MarketingPreference,
 )
+from .selling import (
+    UpdatesForm,
+    application_limit,
+    leadhub_origin,
+    pilot_checkout_ready,
+)
 from .services import (
     BillingConfigurationError,
     BillingSubscriptionPending,
@@ -41,10 +47,26 @@ from .services import (
 IMPORT_PREVIEW_KEY = "jobmail_import_preview"
 IMPORT_MAX_BYTES = 1024 * 1024
 IMPORT_MAX_ROWS = 100
+OPEN_SUBSCRIPTION_STATUSES = (
+    "created",
+    "authenticated",
+    "active",
+    "pending",
+    "paused",
+    "halted",
+)
 
 
 def home(request):
-    return render(request, "tracker/home.html", {"price": settings.PRO_PRICE_DISPLAY})
+    return render(
+        request,
+        "tracker/home.html",
+        {
+            "price": settings.PRO_PRICE_DISPLAY,
+            "updates_form": UpdatesForm(),
+            "updates_ready": bool(leadhub_origin()),
+        },
+    )
 
 
 def signup(request):
@@ -151,6 +173,8 @@ def dashboard_context(request, form=None):
         "subscription": getattr(request.user, "billing_subscription", None),
         "price": settings.PRO_PRICE_DISPLAY,
         "billing_ready": billing_available(),
+        "pilot_trial": getattr(request.user, "pilot_trial", None),
+        "pilot_checkout_ready": pilot_checkout_ready(),
     }
 
 
@@ -166,12 +190,10 @@ def add_application(request):
     if form.is_valid():
         with transaction.atomic():
             user = User.objects.select_for_update().get(pk=request.user.pk)
-            subscription = BillingSubscription.objects.filter(
-                user=user, status="active"
-            ).exists()
+            limit = application_limit(user)
             if (
-                not subscription
-                and JobApplication.objects.filter(user=user).count() >= 25
+                limit is not None
+                and JobApplication.objects.filter(user=user).count() >= limit
             ):
                 capacity_reached = True
             else:
@@ -262,15 +284,13 @@ def export_data(request):
 
 
 def _import_context(request):
-    active = BillingSubscription.objects.filter(
-        user=request.user, status="active"
-    ).exists()
+    limit = application_limit(request.user)
     tracked = JobApplication.objects.filter(user=request.user).count()
-    remaining = None if active else max(0, 25 - tracked)
+    remaining = None if limit is None else max(0, limit - tracked)
     return {
         "preview": request.session.get(IMPORT_PREVIEW_KEY),
         "remaining_slots": remaining,
-        "unlimited": active,
+        "unlimited": limit is None,
     }
 
 
@@ -293,11 +313,9 @@ def import_applications(request):
         stale_preview = False
         with transaction.atomic():
             user = User.objects.select_for_update().get(pk=request.user.pk)
-            active = BillingSubscription.objects.filter(
-                user=user, status="active"
-            ).exists()
+            limit = application_limit(user)
             tracked = JobApplication.objects.filter(user=user).count()
-            remaining = None if active else max(0, 25 - tracked)
+            remaining = None if limit is None else max(0, limit - tracked)
             if remaining is not None and len(rows) > remaining:
                 noun = "application" if remaining == 1 else "applications"
                 capacity_error = (
@@ -450,14 +468,7 @@ def delete_account(request):
         return redirect("dashboard")
     if BillingSubscription.objects.filter(
         user=request.user,
-        status__in=[
-            "created",
-            "authenticated",
-            "active",
-            "pending",
-            "paused",
-            "halted",
-        ],
+        status__in=OPEN_SUBSCRIPTION_STATUSES,
     ).exists():
         messages.error(
             request,
@@ -478,7 +489,7 @@ def checkout(request):
             user = User.objects.select_for_update().get(pk=request.user.pk)
             existing = BillingSubscription.objects.filter(
                 user=user,
-                status__in=["created", "authenticated", "active", "pending"],
+                status__in=OPEN_SUBSCRIPTION_STATUSES,
             ).exists()
             if existing:
                 messages.info(

@@ -1,7 +1,7 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from . import views
+from . import selling, views
 
 urlpatterns = [
     path("", views.home, name="home"),
@@ -27,6 +27,9 @@ urlpatterns = [
     path("robots.txt", views.robots_txt, name="robots"),
     path("sitemap.xml", views.sitemap, name="sitemap"),
     path("pricing/", views.home, name="pricing"),
+    path("updates/subscribe/", selling.subscribe, name="subscribe_updates"),
+    path("pilot/trial/", selling.start_trial, name="start_trial"),
+    path("pilot/checkout/", selling.pilot_checkout, name="pilot_checkout"),
     path(
         "password-reset/",
         auth_views.PasswordResetView.as_view(

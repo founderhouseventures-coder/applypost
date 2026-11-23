@@ -53,3 +53,11 @@ python manage.py collectstatic --noinput
 ```
 
 Tests cover login isolation, application create/edit/export/delete, CSV import preview and limits, search/status/follow-up filters, missing billing configuration, and signed/idempotent webhook intake. They do not prove live email, Razorpay, or deployment behavior.
+
+## Local selling path
+
+Open the product home, create and activate a synthetic tracker account, then add an application with a follow-up date. Start the 14-day trial from the dashboard. When it ends, the existing applications and export stay available under the free plan limits. Product-update consent is separate from account activation and uses LeadHub via `LEADHUB_BASE_URL`.
+
+The one-time ₹299 pilot is a separate Razorpay test order. Enable `RAZORPAY_PILOT_TEST_ENABLED` only in an approved test environment with `RAZORPAY_MODE=test` and founder-owned test credentials. The product note is `applypost`. A checkout return does not unlock access. Provider checkout, server reconciliation and shared revenue reporting still require integration verification.
+
+[Create a Razorpay order](https://razorpay.com/docs/api/orders/create/) · [Standard Checkout](https://razorpay.com/docs/payments/payment-gateway/web-integration/standard/integration-steps/)

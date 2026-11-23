@@ -49,7 +49,7 @@
             </div>
             {% if item.job_url %}<a href="{{ item.job_url }}" target="_blank" rel="noopener noreferrer">Open role ↗</a>{% endif %}
             <a href="{% url 'edit_application' item.pk %}">Edit</a>
-            <form method="post" action="{% url 'delete_application' item.pk %}">{% csrf_token %}<button class="link-button danger" aria-label="Delete {{ item.role }} at {{ item.company }}">Remove</button></form>
+            <form method="post" action="{% url 'delete_application' item.pk %}">{% csrf_token %}<button class="link-button danger" aria-label="Remove {{ item.role }} at {{ item.company }}">Remove</button></form>
           </article>
         {% endfor %}
       </div>
@@ -76,6 +76,17 @@
   <aside class="side-panel">
     <div class="panel-title"><div><p class="eyebrow">ADD TO PIPELINE</p><h2>New application</h2></div></div>
     <form method="post" action="{% url 'add_application' %}" class="job-form">{% csrf_token %}{{ form.as_p }}<button class="button primary">Save application</button></form>
+    <div class="billing-card">
+      <h3>14-day Pro trial</h3>
+      {% if pilot_trial %}
+        <p>Trial ends {{ pilot_trial.ends_at|date:"j M Y, H:i T" }}. You keep your existing applications when it ends.</p>
+        <form method="post" action="{% url 'pilot_checkout' %}">{% csrf_token %}<button class="button" {% if not pilot_checkout_ready %}disabled{% endif %}>₹299 pilot · Open test checkout</button></form>
+        {% if not pilot_checkout_ready %}<p>Test checkout is pending setup.</p>{% endif %}
+      {% else %}
+        <p>Try unlimited tracking for 14 days. No payment details required.</p>
+        <form method="post" action="{% url 'start_trial' %}">{% csrf_token %}<button class="button">Start free trial</button></form>
+      {% endif %}
+    </div>
     <div class="billing-card">
       <p class="eyebrow">JOBMAIL PRO</p><h3>{{ price }}</h3>
       <p>{% if subscription %}Plan status: <strong>{{ subscription.status|capfirst }}</strong>{% else %}Pro checkout is being prepared. Your account is in free beta.{% endif %}</p>
