@@ -76,3 +76,9 @@ Status update recorded in 01_Command_Center/DEMO_READY_REPORT.md. See that repor
 - **Deploy** — Static `site/` published at https://applypost.vercel.app; project output directory is `site`, and Production `DEMO_MODE=1` is configured.
 - **CI and local checks** — Latest `main` CI is green. Local checks recorded above: 43 CLI tests, 29 SaaS tests, two Node tests, Ruff, migration check, JS syntax, static collection, and dependency audit passed. Targeted mypy still has one existing `UserCreationForm.Meta` error.
 - **Smoke limits** — Direct live status, demo CTA click, and 400px browser check were not completed in this run; local demo route and site behavior passed.
+
+## 25 November 2026: production smoke record
+
+- Production URL: https://applypost.vercel.app
+- Homepage/landing HTTP 200; live demo click-through pending; see `01_Command_Center/DEMO_READY_REPORT.md` for exact proof limits.
+- Security header scan: required headers present on the checked landing response.
