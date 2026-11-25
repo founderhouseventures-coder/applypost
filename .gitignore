@@ -19,3 +19,6 @@ __pycache__/
 Thumbs.db
 
 .vercel
+.env.local
+.env.*.local
+.env*

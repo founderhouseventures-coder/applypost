@@ -65,3 +65,14 @@ QB done locally. The restored SQLite snapshot recovered the synthetic applicatio
   - Pre-existing failure: mypy reports `forms.py:12 UserCreationForm.Meta` (not touched in this wave).
   - Clicked through locally with curl: demo login → board → insights → export all return 200. Insights shows 24 tracked, 20 sent, 25%, 8 due.
   - Skipped: browser screenshot, because the Playwright browser was busy.
+
+## 25 Nov 2026: portfolio deployment sweep
+
+Status update recorded in 01_Command_Center/DEMO_READY_REPORT.md. See that report for production URL, smoke, security and outstanding owner or deployment checks.
+
+
+## 25 November 2026: production static demo
+
+- **Deploy** — Static `site/` published at https://applypost.vercel.app; project output directory is `site`, and Production `DEMO_MODE=1` is configured.
+- **CI and local checks** — Latest `main` CI is green. Local checks recorded above: 43 CLI tests, 29 SaaS tests, two Node tests, Ruff, migration check, JS syntax, static collection, and dependency audit passed. Targeted mypy still has one existing `UserCreationForm.Meta` error.
+- **Smoke limits** — Direct live status, demo CTA click, and 400px browser check were not completed in this run; local demo route and site behavior passed.
