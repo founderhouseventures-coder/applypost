@@ -31,6 +31,7 @@ class JobApplicationForm(forms.ModelForm):
             "job_url",
             "applied_on",
             "follow_up_on",
+            "resume_version",
             "notes",
         )
         widgets = {

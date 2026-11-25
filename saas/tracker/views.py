@@ -1,6 +1,8 @@
 import csv
 import io
+import os
 import secrets
+from datetime import timedelta
 
 import requests
 from django.conf import settings
@@ -12,8 +14,9 @@ from django.core import signing
 from django.core.mail import send_mail
 from django.core.paginator import Paginator
 from django.db import DatabaseError, connection, transaction
-from django.db.models import Q
-from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
+from django.db.models import Count, Q
+from django.db.models.functions import TruncWeek
+from django.http import Http404, HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -255,6 +258,7 @@ def export_data(request):
             "Applied on",
             "Follow-up",
             "Notes",
+            "Resume version",
         ]
     )
 
@@ -277,6 +281,7 @@ def export_data(request):
                     item.applied_on or "",
                     item.follow_up_on or "",
                     item.notes,
+                    item.resume_version,
                 ]
             ]
         )
@@ -614,3 +619,76 @@ def sitemap(request):
         "</urlset>",
         content_type="application/xml",
     )
+
+
+@login_required
+def board(request):
+    columns: dict[str, tuple[str, list[JobApplication]]] = {
+        value: (label, []) for value, label in JobApplication.Status.choices
+    }
+    for item in JobApplication.objects.filter(user=request.user).only(
+        "company", "role", "status", "follow_up_on", "resume_version"
+    ):
+        columns[item.status][1].append(item)
+    return render(
+        request,
+        "tracker/board.html",
+        {"columns": columns.values(), "today": timezone.localdate()},
+    )
+
+
+@login_required
+def insights(request):
+    today = timezone.localdate()
+    start = today - timedelta(days=today.weekday() + 7 * 7)
+    apps = JobApplication.objects.filter(user=request.user)
+    weekly = dict(
+        apps.filter(applied_on__gte=start)
+        .annotate(week=TruncWeek("applied_on"))
+        .values_list("week")
+        .annotate(n=Count("id"))
+    )
+    weeks = [start + timedelta(weeks=i) for i in range(8)]
+    counts = [weekly.get(w, 0) for w in weeks]
+    peak = max(counts) or 1
+    bars = [
+        {
+            "x": 10 + i * 50,
+            "h": round(n * 120 / peak),
+            "n": n,
+            "label": w.strftime("%d %b"),
+        }
+        for i, (w, n) in enumerate(zip(weeks, counts, strict=True))
+    ]
+    status = dict(apps.values_list("status").annotate(n=Count("id")))
+    sent = sum(n for s, n in status.items() if s != "saved")
+    replies = status.get("interview", 0) + status.get("offer", 0)
+    return render(
+        request,
+        "tracker/insights.html",
+        {
+            "bars": bars,
+            "total": sum(status.values()),
+            "sent": sent,
+            "reply_rate": round(100 * replies / sent) if sent else 0,
+            "due": apps.filter(
+                follow_up_on__lte=today, status__in=["saved", "applied", "interview"]
+            ).count(),
+            "resumes": apps.exclude(resume_version="")
+            .values("resume_version")
+            .annotate(
+                n=Count("id"),
+                wins=Count("id", filter=Q(status__in=["interview", "offer"])),
+            )
+            .order_by("-n"),
+        },
+    )
+
+
+@require_POST
+def demo_login(request):
+    if os.environ.get("DEMO_MODE") != "1":
+        raise Http404
+    user = get_object_or_404(User, username="demo", is_superuser=False)
+    login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+    return redirect("board")

@@ -1,0 +1,27 @@
+{% extends "tracker/base.html" %}
+{% block title %}Insights · JobMail{% endblock %}
+{% block content %}
+<section class="dashboard-head">
+  <div><p class="eyebrow">YOUR NUMBERS</p><h1>Insights</h1><p>How your search is moving, week by week.</p></div>
+  <div class="dashboard-actions"><a class="button" href="{% url 'board' %}">Board</a><a class="button" href="{% url 'export_data' %}">Export CSV ↓</a></div>
+</section>
+<section class="dashboard-grid">
+  <div class="main-panel">
+    <div class="pipeline-stats">
+      <div><strong>{{ total }}</strong><b>Tracked</b></div>
+      <div><strong>{{ sent }}</strong><b>Sent</b></div>
+      <div><strong>{{ reply_rate }}%</strong><b>Interview rate</b></div>
+      <div><strong>{{ due }}</strong><b>Follow-ups due</b></div>
+    </div>
+    <h2>Applications sent per week</h2>
+    <svg class="week-chart" viewBox="0 0 410 160" role="img" aria-label="Applications per week for the last 8 weeks">
+      {% for b in bars %}<g><title>{{ b.label }}: {{ b.n }}</title><rect class="bar" x="{{ b.x }}" y="0" width="34" height="{{ b.h }}" transform="translate(0 130) scale(1 -1)"></rect><text x="{{ b.x|add:17 }}" y="148" text-anchor="middle">{{ b.label }}</text></g>{% endfor %}
+    </svg>
+  </div>
+  <aside class="side-panel">
+    <h2>Resume versions</h2>
+    {% for r in resumes %}<p class="resume-row"><b>{{ r.resume_version }}</b><span>{{ r.n }} sent · {{ r.wins }} interviews</span></p>
+    {% empty %}<p class="board-empty">Add a resume version to an application to compare them.</p>{% endfor %}
+  </aside>
+</section>
+{% endblock %}

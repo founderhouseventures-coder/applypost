@@ -52,3 +52,16 @@ Passed Ruff, targeted mypy, 25 SaaS Django tests, 43 CLI tests, two static-site 
 ## 23 November 2026 quality bar follow-up
 
 QB done locally. The restored SQLite snapshot recovered the synthetic application, integrity check passed, and the dashboard query count stayed flat as rows increased. Fresh SaaS verification now has 29 Django tests.
+
+## 24 November 2026: demo-ready wave 4
+
+- Added a Kanban board at `/board/` grouped by stage. Overdue follow-ups are flagged in red.
+- Each application now has a resume version (migration 0004). The CSV export includes it.
+- Added `/insights/`: KPI cards (tracked, sent, interview rate, follow-ups due), an SVG chart of applications sent per week over the last 8 weeks, and interview counts per resume version.
+- Added a `seed_demo` command (24 synthetic applications) and a `DEMO_MODE=1` one-click "Try the demo" login that lands on the board.
+- The landing page now shows three plans (Starter ₹0, Pro, Career coach ₹2,999) and 4 FAQs.
+- Checks:
+  - Passed: 33/33 Django tests (4 new), ruff check, and mypy on the changed files.
+  - Pre-existing failure: mypy reports `forms.py:12 UserCreationForm.Meta` (not touched in this wave).
+  - Clicked through locally with curl: demo login → board → insights → export all return 200. Insights shows 24 tracked, 20 sent, 25%, 8 due.
+  - Skipped: browser screenshot, because the Playwright browser was busy.

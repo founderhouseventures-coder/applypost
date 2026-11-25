@@ -26,6 +26,7 @@ class JobApplication(models.Model):
     job_url = models.URLField(max_length=500, blank=True)
     applied_on = models.DateField(null=True, blank=True)
     follow_up_on = models.DateField(null=True, blank=True)
+    resume_version = models.CharField(max_length=80, blank=True)
     notes = models.CharField(max_length=1000, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

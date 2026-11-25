@@ -43,6 +43,8 @@ The OCI environment uses a founder-owned sender via SMTP for transactional accou
 
 The OCI guide includes a daily local database dump with rotation and a restore script. This is not an off-site backup; copy encrypted backups to a separate private location and perform a restore drill before inviting real customers. Do not keep database dumps in this Git repository or public object storage.
 
+The restore script uses the database container's configured user and database and restores in a single PostgreSQL transaction. Rehearse with the same archive format in a disposable database before running it on the founder host.
+
 ## Verification
 
 ```powershell

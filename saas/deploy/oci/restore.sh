@@ -19,6 +19,6 @@ if [[ "$confirmation" != "RESTORE JOBMAIL" ]]; then
 fi
 
 docker compose --project-directory "$app_dir" -f "$compose_file" \
-  exec -T db pg_restore --clean --if-exists --no-owner --no-acl \
-    -U jobmail -d jobmail < "$backup_file"
+  exec -T db sh -ec 'pg_restore --single-transaction --clean --if-exists --no-owner --no-acl \
+    -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < "$backup_file"
 echo "Restore completed. Verify /health/ and a synthetic account before serving users."

@@ -7,7 +7,7 @@
     <h1>Good to see you, {{ request.user.username }}.</h1>
     <p>One next step at a time.</p>
   </div>
-  <div class="dashboard-actions"><a class="button" href="{% url 'import_applications' %}">Import CSV ↑</a><a class="button" href="{% url 'export_data' %}">Export my data ↓</a></div>
+  <div class="dashboard-actions"><a class="button" href="{% url 'board' %}">Board</a><a class="button" href="{% url 'insights' %}">Insights</a><a class="button" href="{% url 'import_applications' %}">Import CSV ↑</a><a class="button" href="{% url 'export_data' %}">Export my data ↓</a></div>
 </section>
 <section class="dashboard-grid">
   <div class="main-panel">
